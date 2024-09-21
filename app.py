@@ -1,12 +1,15 @@
 from flask import Flask, render_template, redirect, url_for, send_from_directory, flash, request , jsonify
 import firebase_admin
-from firebase_admin import credentials, storage, firestore
+from firebase_admin import credentials, storage, firestore, db
 from datetime import datetime, timedelta
 import os
 import io
 import zipfile
-import logging  # Aggiungi il modulo logging
-from dotenv import load_dotenv  # Aggiungi questa riga per caricare le variabili da .env
+import logging
+import openpyxl  # Libreria per gestire Excel
+from dotenv import load_dotenv
+from openpyxl.styles import Alignment, Font
+from openpyxl.utils import get_column_letter
 
 # Carica le variabili d'ambiente dal file .env
 load_dotenv()
@@ -22,14 +25,18 @@ logging.basicConfig(level=logging.DEBUG if app.debug else logging.INFO)
 # Inizializza Firebase
 if not firebase_admin._apps:
     cred = credentials.Certificate(os.getenv('FIREBASE_KEY_PATH'))
-    firebase_admin.initialize_app(cred, {'storageBucket': os.getenv('FIREBASE_STORAGE_BUCKET')})
+    firebase_admin.initialize_app(cred, {
+        'storageBucket': os.getenv('FIREBASE_STORAGE_BUCKET'),
+        'databaseURL': os.getenv('FIREBASE_DB_URL')  # Aggiungi l'URL del database in tempo reale
+    })
 
-db = firestore.client()
 bucket = storage.bucket()
+db_ref = db.reference("/Attivita/Utenti")
 
 # Directory temporanea per i file
 TEMP_DIR = os.path.join(os.getcwd(), "temp")
 os.makedirs(TEMP_DIR, exist_ok=True)
+
 
 @app.route('/')
 def index():
@@ -43,9 +50,107 @@ def gestione_cantieri():
 def gestione_operai():
     return render_template('gestione_operai.html')
 
-@app.route('/gestione_excel')
+@app.route('/gestione_excel', methods=['GET', 'POST'])
 def gestione_excel():
+    if request.method == 'POST':
+        data_inizio = request.form.get('data_inizio')
+        data_fine = request.form.get('data_fine')
+
+        # Validazione delle date
+        if not data_inizio or not data_fine:
+            flash("Per favore, seleziona entrambe le date.")
+            return redirect(url_for('gestione_excel'))
+
+        # Fetch dei dati da Firebase
+        attivita_list = fetch_attivita_from_firebase(data_inizio, data_fine)
+
+        if not attivita_list:
+            flash("Nessuna attività trovata per il periodo selezionato.")
+            return redirect(url_for('gestione_excel'))
+
+        # Genera il file Excel
+        excel_filename = generate_excel(attivita_list, data_inizio, data_fine)
+
+        # Fornisci il file Excel per il download
+        return send_from_directory(TEMP_DIR, excel_filename, as_attachment=True)
+
     return render_template('gestione_excel.html')
+
+def fetch_attivita_from_firebase(data_inizio, data_fine):
+    # Converti le date in oggetti datetime
+    data_inizio_dt = datetime.strptime(data_inizio, "%Y-%m-%d")
+    data_fine_dt = datetime.strptime(data_fine, "%Y-%m-%d")
+    
+    attivita_list = []
+    
+    # Leggi i dati da Firebase Realtime Database
+    snapshot = db_ref.get()
+
+    # Itera attraverso gli utenti e le attività
+    for user, attivita_data in snapshot.items():
+        for attivita_id, attivita in attivita_data.items():
+            # Confronta le date delle attività con il range specificato
+            attivita_data_str = attivita.get('data')
+            if attivita_data_str:
+                attivita_data_dt = datetime.strptime(attivita_data_str, "%d/%m/%Y")
+
+                if data_inizio_dt <= attivita_data_dt <= data_fine_dt:
+                    attivita_list.append({
+                        'data': attivita.get('data'),
+                        'cantiere': attivita.get('cantiere'),
+                        'operaio': attivita.get('operaio'),
+                        'ore': attivita.get('ore'),
+                        'lavorazione': attivita.get('lavorazione'),
+                        'pioggia_vento': attivita.get('pioggia_vento', ''),
+                        'ferie_permesso': attivita.get('ferie_permesso', '')
+                    })
+    return attivita_list
+
+def generate_excel(attivita_list, data_inizio, data_fine):
+    filename = f"Foglio_Excel_{data_inizio}_to_{data_fine}.xlsx"
+    filepath = os.path.join(TEMP_DIR, filename)
+
+    # Crea il workbook Excel
+    workbook = openpyxl.Workbook()
+    sheet = workbook.active
+    sheet.title = "Attività"
+
+    # Crea intestazioni
+    headers = ["Data", "Cantiere", "Operaio", "Ore", "Lavorazione", "Pioggia/Vento", "Ferie/Permesso"]
+    sheet.append(headers)
+
+    # Stili per le celle
+    header_font = Font(bold=True)
+    alignment = Alignment(horizontal="center")
+
+    for col_num, header in enumerate(headers, 1):
+        cell = sheet.cell(row=1, column=col_num)
+        cell.font = header_font
+        cell.alignment = alignment
+
+    # Inserisci i dati delle attività
+    for attivita in attivita_list:
+        row = [
+            attivita['data'],
+            attivita['cantiere'],
+            attivita['operaio'],
+            attivita['ore'],
+            attivita['lavorazione'],
+            attivita['pioggia_vento'],
+            attivita['ferie_permesso']
+        ]
+        sheet.append(row)
+
+    # Imposta la larghezza delle colonne
+    for col in sheet.columns:
+        max_length = max(len(str(cell.value)) for cell in col)
+        adjusted_width = (max_length + 2)
+        sheet.column_dimensions[get_column_letter(col[0].column)].width = adjusted_width
+
+    # Salva il file Excel
+    workbook.save(filepath)
+
+    return filename
 
 @app.route('/gestione_attivita')
 def gestione_attivita():
@@ -94,7 +199,6 @@ def gestione_foto_bolle():
                 return jsonify({'zip_url': zip_url})
             
     return render_template('gestione_foto_bolle.html', years=years, months=months, period=period)
-
 
 def fetch_photos(start_year, start_month, end_year, end_month):
     start_year = int(start_year)
@@ -190,7 +294,6 @@ def create_zip(start_year, start_month, end_year, end_month):
 
     logging.debug(f"File ZIP creato con successo: {zip_filepath}")
     return zip_filename
-
 
 @app.route('/download_zip/<filename>')
 def download_zip(filename):

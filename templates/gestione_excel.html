@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestione Excel</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container">
+        <h1 class="mt-5">Generazione File Excel</h1>
+        <form method="POST" action="/gestione_excel">
+            <div class="form-group">
+                <label for="data_inizio">Data Inizio</label>
+                <input type="date" name="data_inizio" class="form-control" id="data_inizio" required>
+            </div>
+            <div class="form-group">
+                <label for="data_fine">Data Fine</label>
+                <input type="date" name="data_fine" class="form-control" id="data_fine" required>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Genera Excel</button>
+        </form>
+    </div>
+</body>
+</html>
