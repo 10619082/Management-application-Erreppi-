@@ -131,10 +131,11 @@ def create_zip(start_year, start_month, end_year, end_month):
         for idx, blob in enumerate(blobs):
             # Usa il nome del blob direttamente
             blob_name = blob.name  # Questo restituisce il percorso del blob come DDT/2024/7/Maremmana Gomme _CIVITAVECCHIA_3-7-2024 + 5c1895.jpg
-
+            blob_name = '/'.join(blob_name.split('/')[1:])
+           
             if blob.exists():  # Verifica che il blob esista
                 image_data = blob.download_as_bytes()  # Scarica i dati del blob
-                zip_file.writestr(f"image_{idx}.jpg", image_data)  # Salva l'immagine nel file ZIP
+                zip_file.writestr(f"{blob_name}", image_data)  # Salva l'immagine nel file ZIP
             else:
                 print(f"Errore: Blob {blob_name} non trovato")
 
