@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Benvenuto</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            background-image: url("../static/background.jpg");
+            background-size: cover;
+            background-repeat: no-repeat;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.8);
+            padding: 50px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .btn {
+            width: 100%;
+            margin: 10px 0;
+            font-size: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="display-4">Benvenuto</h1>
+        <div class="d-flex flex-column">
+            <a href="{{ url_for('gestione_cantieri') }}" class="btn btn-primary">Gestisci Cantieri</a>
+            <a href="{{ url_for('gestione_operai') }}" class="btn btn-secondary">Gestisci Operai</a>
+            <a href="{{ url_for('gestione_excel') }}" class="btn btn-success">Genera Foglio Excel</a>
+            <a href="{{ url_for('gestione_attivita') }}" class="btn btn-danger">Aggiungi / Modifica Attività Operai</a>
+            <a href="{{ url_for('gestione_foto_bolle') }}" class="btn btn-warning">Gestisci Foto Bolle</a>
+        </div>
+    </div>
+</body>
+</html>

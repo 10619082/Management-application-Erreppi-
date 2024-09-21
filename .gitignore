@@ -1,0 +1,12 @@
+# Evita di caricare file di configurazione locali e dati sensibili
+.env
+firebase_key/
+test.py
+temp/
+venv
+
+# File di sistema e temporanei
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store

@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestione Foto Bolle</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1 class="mt-5">Gestione Foto Bolle</h1>
+
+        <form id="foto_bolle_form" method="POST">
+            <div class="form-group">
+                <label for="start_year">Anno di inizio</label>
+                <select name="start_year" class="form-control">
+                    {% for year in years %}
+                    <option value="{{ year }}">{{ year }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="start_month">Mese di inizio</label>
+                <select name="start_month" class="form-control">
+                    {% for month in months %}
+                    <option value="{{ month }}">{{ month }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="end_year">Anno di fine (opzionale)</label>
+                <select name="end_year" class="form-control">
+                    <option value="">---</option>
+                    {% for year in years %}
+                    <option value="{{ year }}">{{ year }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="end_month">Mese di fine (opzionale)</label>
+                <select name="end_month" class="form-control">
+                    <option value="">---</option>
+                    {% for month in months %}
+                    <option value="{{ month }}">{{ month }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <button type="submit" name="action" value="Visualizza Foto" class="btn btn-primary">Visualizza Foto</button>
+            <button type="button" id="scarica_button" class="btn btn-secondary">Scarica Foto</button>
+        </form>
+
+        <!-- Spinner e messaggio di caricamento -->
+        <div id="loading_spinner" style="display:none; margin-top: 20px;">
+            <div class="spinner-border text-primary" role="status">
+                <span class="sr-only">Caricamento...</span>
+            </div>
+            <span id="loading_message" style="margin-left: 10px;">Attendere processamento foto...</span>
+        </div>
+
+        <div class="mt-5">
+            <h2>Risultati {% if period %}: {{ period }} {% endif %}</h2> <!-- Visualizza il periodo -->
+            <div class="d-flex flex-wrap">
+                {% if photo_urls %}
+                {% for url in photo_urls %}
+                <img src="{{ url }}" alt="Photo" class="img-thumbnail" style="width:150px; height:150px;">
+                {% endfor %}
+                {% else %}
+                <p>Nessuna foto trovata per il periodo selezionato.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            $("#scarica_button").click(function() {
+                // Mostra lo spinner e il messaggio di caricamento
+                $("#loading_spinner").show();
+                $("#loading_message").text("Attendere processamento foto...");
+
+                // Esegui l'invio del form con AJAX
+                $.ajax({
+                    type: "POST",
+                    url: "/gestione_foto_bolle",  // Questo invia la richiesta a Flask per generare il file ZIP
+                    data: $("#foto_bolle_form").serialize() + '&action=Scarica Foto',
+                    success: function(response) {
+                        // Nascondi lo spinner e il messaggio
+                        $("#loading_spinner").hide();
+
+                        // Reindirizza per il download del file ZIP
+                        window.location.href = response.zip_url;
+                    },
+                    error: function() {
+                        // Nascondi lo spinner anche in caso di errore
+                        $("#loading_spinner").hide();
+                        alert("Errore durante il download del file.");
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
