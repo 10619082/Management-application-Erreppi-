@@ -14,7 +14,7 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY')  
 
-app.debug = True
+app.debug = False
 
 # Inizializza il logger
 logging.basicConfig(level=logging.DEBUG if app.debug else logging.INFO)
