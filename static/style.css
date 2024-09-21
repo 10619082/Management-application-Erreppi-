@@ -1,6 +1,6 @@
 /* Personalizzazione del background */
 body {
-    background-image: url("/static/simple_back.jpg"); /* Percorso della tua immagine */
+    background-image: url("/static/b.jpg"); /* Percorso della tua immagine */
     background-size: 100% 100%; /* Estende l'immagine sia in altezza che in larghezza */
     background-position: top center; /* Posiziona l'immagine al centro e in cima */
     background-repeat: no-repeat; /* Evita che l'immagine si ripeta */

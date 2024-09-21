@@ -11,6 +11,8 @@ from dotenv import load_dotenv
 from openpyxl.styles import Alignment, Font
 from openpyxl.utils import get_column_letter
 
+import xlsxwriter
+
 # Carica le variabili d'ambiente dal file .env
 load_dotenv()
 
@@ -52,105 +54,145 @@ def gestione_operai():
 
 @app.route('/gestione_excel', methods=['GET', 'POST'])
 def gestione_excel():
+    logging.info("Accesso alla rotta gestione_excel")
     if request.method == 'POST':
-        data_inizio = request.form.get('data_inizio')
-        data_fine = request.form.get('data_fine')
+        logging.info("Metodo POST chiamato")
+        data_inizio = request.form['start_date']
+        data_fine = request.form['end_date']
+        action = request.form['action']  # Può essere 'contabilita', 'completo', 'buste'
 
-        # Validazione delle date
-        if not data_inizio or not data_fine:
-            flash("Per favore, seleziona entrambe le date.")
-            return redirect(url_for('gestione_excel'))
+        logging.info(f"Data Inizio: {data_inizio}, Data Fine: {data_fine}, Azione: {action}")
 
-        # Fetch dei dati da Firebase
         attivita_list = fetch_attivita_from_firebase(data_inizio, data_fine)
 
-        if not attivita_list:
-            flash("Nessuna attività trovata per il periodo selezionato.")
-            return redirect(url_for('gestione_excel'))
+        if action == 'contabilita':
+            file_path = generate_excel_contabilita(attivita_list, data_inizio, data_fine)
+        elif action == 'completo':
+            file_path = generate_excel_completo(attivita_list, data_inizio, data_fine)
+        elif action == 'buste':
+            file_path = generate_excel_buste(attivita_list, data_inizio, data_fine)
 
-        # Genera il file Excel
-        excel_filename = generate_excel(attivita_list, data_inizio, data_fine)
-
-        # Fornisci il file Excel per il download
-        return send_from_directory(TEMP_DIR, excel_filename, as_attachment=True)
+        # Restituisci il file Excel generato come risposta
+        if file_path:
+            return send_from_directory(TEMP_DIR, file_path, as_attachment=True)
 
     return render_template('gestione_excel.html')
 
+
 def fetch_attivita_from_firebase(data_inizio, data_fine):
-    # Converti le date in oggetti datetime
-    data_inizio_dt = datetime.strptime(data_inizio, "%Y-%m-%d")
-    data_fine_dt = datetime.strptime(data_fine, "%Y-%m-%d")
-    
+    ref = db.reference('/Attivita/Utenti')
+    snapshot = ref.get()
     attivita_list = []
-    
-    # Leggi i dati da Firebase Realtime Database
-    snapshot = db_ref.get()
 
-    # Itera attraverso gli utenti e le attività
-    for user, attivita_data in snapshot.items():
-        for attivita_id, attivita in attivita_data.items():
-            # Confronta le date delle attività con il range specificato
-            attivita_data_str = attivita.get('data')
-            if attivita_data_str:
-                attivita_data_dt = datetime.strptime(attivita_data_str, "%d/%m/%Y")
+    for utente_id, utente_data in snapshot.items():
+        for attivita_id, attivita in utente_data.items():
+            data_attivita = attivita.get('data')
+            if is_date_in_range(data_attivita, data_inizio, data_fine):
+                attivita_list.append({
+                    'data': attivita.get('data'),
+                    'cantiere': attivita.get('cantiere'),
+                    'operaio': attivita.get('operaio'),
+                    'ore': attivita.get('ore'),
+                    'lavorazione': attivita.get('lavorazione'),
+                    'pioggia_vento': attivita.get('pioggia_vento'),
+                    'ferie_permesso': attivita.get('ferie_permesso')
+                })
 
-                if data_inizio_dt <= attivita_data_dt <= data_fine_dt:
-                    attivita_list.append({
-                        'data': attivita.get('data'),
-                        'cantiere': attivita.get('cantiere'),
-                        'operaio': attivita.get('operaio'),
-                        'ore': attivita.get('ore'),
-                        'lavorazione': attivita.get('lavorazione'),
-                        'pioggia_vento': attivita.get('pioggia_vento', ''),
-                        'ferie_permesso': attivita.get('ferie_permesso', '')
-                    })
+    logging.info(f"Numero di attività trovate: {len(attivita_list)}")
     return attivita_list
 
-def generate_excel(attivita_list, data_inizio, data_fine):
-    filename = f"Foglio_Excel_{data_inizio}_to_{data_fine}.xlsx"
-    filepath = os.path.join(TEMP_DIR, filename)
 
-    # Crea il workbook Excel
-    workbook = openpyxl.Workbook()
-    sheet = workbook.active
-    sheet.title = "Attività"
+def is_date_in_range(date_str, data_inizio, data_fine):
+    # Formato della data proveniente dal database Firebase
+    date_format_db = "%d/%m/%Y"
+    # Formato della data proveniente dal form HTML
+    date_format_form = "%Y-%m-%d"
 
-    # Crea intestazioni
-    headers = ["Data", "Cantiere", "Operaio", "Ore", "Lavorazione", "Pioggia/Vento", "Ferie/Permesso"]
-    sheet.append(headers)
+    try:
+        # Converti le date di inizio e fine provenienti dal form HTML
+        data_inizio_dt = datetime.strptime(data_inizio, date_format_form)
+        data_fine_dt = datetime.strptime(data_fine, date_format_form)
 
-    # Stili per le celle
-    header_font = Font(bold=True)
-    alignment = Alignment(horizontal="center")
+        # Converti la data proveniente dal database Firebase
+        current_date_dt = datetime.strptime(date_str, date_format_db)
 
-    for col_num, header in enumerate(headers, 1):
-        cell = sheet.cell(row=1, column=col_num)
-        cell.font = header_font
-        cell.alignment = alignment
+        # Verifica se la data dell'attività rientra nell'intervallo di date
+        return data_inizio_dt <= current_date_dt <= data_fine_dt
 
-    # Inserisci i dati delle attività
-    for attivita in attivita_list:
-        row = [
-            attivita['data'],
-            attivita['cantiere'],
-            attivita['operaio'],
-            attivita['ore'],
-            attivita['lavorazione'],
-            attivita['pioggia_vento'],
-            attivita['ferie_permesso']
-        ]
-        sheet.append(row)
+    except ValueError as e:
+        logging.error(f"Errore nel parsing della data: {e}")
+        return False
 
-    # Imposta la larghezza delle colonne
-    for col in sheet.columns:
-        max_length = max(len(str(cell.value)) for cell in col)
-        adjusted_width = (max_length + 2)
-        sheet.column_dimensions[get_column_letter(col[0].column)].width = adjusted_width
 
-    # Salva il file Excel
-    workbook.save(filepath)
 
-    return filename
+def generate_excel_contabilita(attivita_list, inizio, fine):
+    file_name = f"contabilita_{inizio}_to_{fine}.xlsx"
+    file_path = os.path.join(TEMP_DIR, file_name)
+
+    workbook = xlsxwriter.Workbook(file_path)
+    worksheet = workbook.add_worksheet("Contabilità")
+
+    headers = ['Data', 'Cantiere', 'Operaio', 'Ore', 'Lavorazione']
+    for col, header in enumerate(headers):
+        worksheet.write(0, col, header)
+
+    for row, attivita in enumerate(attivita_list, start=1):
+        worksheet.write(row, 0, attivita['data'])
+        worksheet.write(row, 1, attivita['cantiere'])
+        worksheet.write(row, 2, attivita['operaio'])
+        worksheet.write(row, 3, attivita['ore'])
+        worksheet.write(row, 4, attivita['lavorazione'])
+
+    workbook.close()
+    return file_name
+
+
+def generate_excel_completo(attivita_list, inizio, fine):
+    file_name = f"completo_{inizio}_to_{fine}.xlsx"
+    file_path = os.path.join(TEMP_DIR, file_name)
+
+    workbook = xlsxwriter.Workbook(file_path)
+    worksheet = workbook.add_worksheet("Completo")
+
+    headers = ['Data', 'Cantiere', 'Operaio', 'Ore', 'Lavorazione', 'Pioggia_Vento', 'Ferie_Permesso']
+    for col, header in enumerate(headers):
+        worksheet.write(0, col, header)
+
+    for row, attivita in enumerate(attivita_list, start=1):
+        worksheet.write(row, 0, attivita['data'])
+        worksheet.write(row, 1, attivita['cantiere'])
+        worksheet.write(row, 2, attivita['operaio'])
+        worksheet.write(row, 3, attivita['ore'])
+        worksheet.write(row, 4, attivita['lavorazione'])
+        worksheet.write(row, 5, attivita['pioggia_vento'])
+        worksheet.write(row, 6, attivita['ferie_permesso'])
+
+    workbook.close()
+    return file_name
+
+
+def generate_excel_buste(attivita_list, inizio, fine):
+    file_name = f"buste_paga_{inizio}_to_{fine}.xlsx"
+    file_path = os.path.join(TEMP_DIR, file_name)
+
+    workbook = xlsxwriter.Workbook(file_path)
+    worksheet = workbook.add_worksheet("Buste Paga")
+
+    headers = ['Data', 'Cantiere', 'Operaio', 'Ore', 'Pioggia_Vento', 'Ferie_Permesso']
+    for col, header in enumerate(headers):
+        worksheet.write(0, col, header)
+
+    for row, attivita in enumerate(attivita_list, start=1):
+        worksheet.write(row, 0, attivita['data'])
+        worksheet.write(row, 1, attivita['cantiere'])
+        worksheet.write(row, 2, attivita['operaio'])
+        worksheet.write(row, 3, attivita['ore'])
+        worksheet.write(row, 4, attivita['pioggia_vento'])
+        worksheet.write(row, 5, attivita['ferie_permesso'])
+
+    workbook.close()
+    return file_name
+
 
 @app.route('/gestione_attivita')
 def gestione_attivita():
