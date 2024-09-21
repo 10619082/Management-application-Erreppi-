@@ -92,13 +92,18 @@
                         // Nascondi lo spinner e il messaggio
                         $("#loading_spinner").hide();
 
-                        // Reindirizza per il download del file ZIP
-                        window.location.href = response.zip_url;
+                        if (response.zip_url) {
+                            // Reindirizza per il download del file ZIP
+                            window.location.href = response.zip_url;
+                        } else if (response.error) {
+                            // Mostra l'errore se non ci sono foto
+                            alert(response.error);
+                        }
                     },
                     error: function() {
                         // Nascondi lo spinner anche in caso di errore
                         $("#loading_spinner").hide();
-                        alert("Errore durante il download del file.");
+                        alert("Errore durante il download.");
                     }
                 });
             });

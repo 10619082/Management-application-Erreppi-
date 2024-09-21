@@ -48,6 +48,7 @@ def gestione_attivita():
 @app.route('/gestione_foto_bolle', methods=['GET', 'POST'])
 def gestione_foto_bolle():
     current_year = datetime.now().year
+
     years = list(range(2023, current_year + 1))
     months = [f"{month:02d}" for month in range(1, 13)]
     period = ""
@@ -72,10 +73,16 @@ def gestione_foto_bolle():
         
         elif action == "Scarica Foto":
             zip_filepath = create_zip(start_year, start_month, end_year, end_month)
-            zip_url = url_for('download_zip', filename=os.path.basename(zip_filepath))
-            return jsonify({'zip_url': zip_url})
-    
+            
+            if zip_filepath is None:
+                # Restituisci un messaggio che informa che non ci sono foto per il periodo selezionato
+                return jsonify({'error': 'Non ci sono foto per il periodo selezionato.'})
+            else:
+                zip_url = url_for('download_zip', filename=os.path.basename(zip_filepath))
+                return jsonify({'zip_url': zip_url})
+            
     return render_template('gestione_foto_bolle.html', years=years, months=months, period=period)
+
 
 
 def fetch_photos(start_year, start_month, end_year, end_month):
@@ -83,7 +90,7 @@ def fetch_photos(start_year, start_month, end_year, end_month):
     start_month = int(start_month)
     photo_urls = []
     # Se l'utente non seleziona la data di fine
-    if not end_year and not end_month:
+    if end_year =='':
         blobs = list(bucket.list_blobs(prefix=f"DDT/{start_year}/{start_month}/"))
         for blob in blobs:
             url = blob.generate_signed_url(timedelta(seconds=300), method='GET')
@@ -110,21 +117,19 @@ def fetch_photos(start_year, start_month, end_year, end_month):
     return photo_urls
 
 def create_zip(start_year, start_month, end_year, end_month):
-
     start_year = int(start_year)
     start_month = int(start_month)
 
+    no_photos = True  # Flag per tenere traccia se ci sono foto o meno
 
-    if end_year =='':
+    if end_year == '':
         zip_filename = f"foto_{start_year}_{start_month}.zip"
         end_year = start_year
         end_month = start_month
-        print('ciao')
     else:
-        print('cane')
         end_year = int(end_year)
         end_month = int(end_month)
-        # Crea un file ZIP temporaneo con tutte le foto
+        # Crea un file ZIP temporaneo per il range di date
         zip_filename = f"foto_{start_year}_{start_month}_to_{end_year}_{end_month}.zip"
 
     zip_filepath = os.path.join(TEMP_DIR, zip_filename)
@@ -139,22 +144,30 @@ def create_zip(start_year, start_month, end_year, end_month):
 
             for month in range(int(month_start), month_end + 1):
                 # Ottieni i blob per l'anno e il mese correnti
-                blobs = bucket.list_blobs(prefix=f"DDT/{year}/{month}/")
+                blobs = list(bucket.list_blobs(prefix=f"DDT/{year}/{month}/"))
+
+                if len(blobs) == 0:
+                    continue  # Nessun blob per questo mese, continua con il prossimo
+
+                no_photos = False  # Se troviamo almeno un blob, imposta no_photos a False
 
                 for idx, blob in enumerate(blobs):
-                    # Usa il nome del blob direttamente
                     blob_name = blob.name
                     blob_name = '/'.join(blob_name.split('/')[1:])  # Rimuove il prefisso 'DDT'
 
-                    print(blob_name)
-                    
                     if blob.exists():  # Verifica che il blob esista
                         image_data = blob.download_as_bytes()  # Scarica i dati del blob
                         zip_file.writestr(f"{blob_name}", image_data)  # Salva l'immagine nel file ZIP
                     else:
                         print(f"Errore: Blob {blob_name} non trovato")
 
+    # Se no_photos è True, significa che non ci sono foto, elimina lo zip
+    if no_photos:
+        os.remove(zip_filepath)  # Rimuovi il file ZIP che è stato creato vuoto
+        return None
+
     return zip_filename
+
 
 
 
