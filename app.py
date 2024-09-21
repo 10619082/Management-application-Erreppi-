@@ -61,7 +61,7 @@ def gestione_foto_bolle():
         action = request.form.get('action')  # Visualizza o Scarica
         
         # Imposta il periodo da visualizzare accanto a "Risultati"
-        if not end_year and not end_month:
+        if end_year == '':
             period = f"{start_month}/{start_year}"
         else:
             period = f"da {start_month}/{start_year} a {end_month}/{end_year}"
@@ -110,34 +110,49 @@ def fetch_photos(start_year, start_month, end_year, end_month):
     return photo_urls
 
 def create_zip(start_year, start_month, end_year, end_month):
+
     start_year = int(start_year)
     start_month = int(start_month)
 
 
-    if not end_year and not end_month:
+    if end_year =='':
         zip_filename = f"foto_{start_year}_{start_month}.zip"
+        end_year = start_year
+        end_month = start_month
+        print('ciao')
     else:
+        print('cane')
         end_year = int(end_year)
         end_month = int(end_month)
-
         # Crea un file ZIP temporaneo con tutte le foto
         zip_filename = f"foto_{start_year}_{start_month}_to_{end_year}_{end_month}.zip"
+
     zip_filepath = os.path.join(TEMP_DIR, zip_filename)
 
+    # Apri il file ZIP
     with zipfile.ZipFile(zip_filepath, "w", zipfile.ZIP_DEFLATED) as zip_file:
-        # Lista di blob dal bucket di Firebase
-        blobs = bucket.list_blobs(prefix=f"DDT/{start_year}/{start_month}/")
+        # Itera su tutti gli anni e mesi tra la data di inizio e di fine
+        for year in range(start_year, end_year + 1):
+            # Definisci il mese di inizio e di fine per ciascun anno
+            month_start = start_month if year == start_year else 1
+            month_end = end_month if year == end_year else 12
 
-        for idx, blob in enumerate(blobs):
-            # Usa il nome del blob direttamente
-            blob_name = blob.name  # Questo restituisce il percorso del blob come DDT/2024/7/Maremmana Gomme _CIVITAVECCHIA_3-7-2024 + 5c1895.jpg
-            blob_name = '/'.join(blob_name.split('/')[1:])
-           
-            if blob.exists():  # Verifica che il blob esista
-                image_data = blob.download_as_bytes()  # Scarica i dati del blob
-                zip_file.writestr(f"{blob_name}", image_data)  # Salva l'immagine nel file ZIP
-            else:
-                print(f"Errore: Blob {blob_name} non trovato")
+            for month in range(int(month_start), month_end + 1):
+                # Ottieni i blob per l'anno e il mese correnti
+                blobs = bucket.list_blobs(prefix=f"DDT/{year}/{month}/")
+
+                for idx, blob in enumerate(blobs):
+                    # Usa il nome del blob direttamente
+                    blob_name = blob.name
+                    blob_name = '/'.join(blob_name.split('/')[1:])  # Rimuove il prefisso 'DDT'
+
+                    print(blob_name)
+                    
+                    if blob.exists():  # Verifica che il blob esista
+                        image_data = blob.download_as_bytes()  # Scarica i dati del blob
+                        zip_file.writestr(f"{blob_name}", image_data)  # Salva l'immagine nel file ZIP
+                    else:
+                        print(f"Errore: Blob {blob_name} non trovato")
 
     return zip_filename
 
