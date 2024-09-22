@@ -10,3 +10,28 @@ __pycache__/
 *.pyc
 *.pyo
 .DS_Store
+
+# File di log
+*.log
+logs/
+
+# Configurazioni locali dell'editor
+.vscode/
+.idea/
+
+# Backup di editor
+*~
+*.swp
+
+# File generati durante il runtime
+instance/
+
+# Certificati locali e file di configurazione sensibili
+*.pem
+*.crt
+*.key
+
+# File di copertura del codice per strumenti di testing
+.coverage
+coverage/
+htmlcov/
