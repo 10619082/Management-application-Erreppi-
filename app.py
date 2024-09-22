@@ -72,12 +72,16 @@ def login():
 
         # Verifica se l'username e la password corrispondono a quelli nel file .env
         if username == USER_NAME and password == USER_PASSWORD:
-            session['user'] = username
+            session['user'] = username  # Mantieni il nome utente nella sessione
+            session['logged_in'] = True  # Aggiungi questa riga per settare lo stato "logged_in"
             return redirect(url_for('index'))
         else:
             flash('Credenziali non valide. Riprova.')
 
     return render_template('login.html')
+
+
+
 
 # Rotta per l'homepage dopo il login
 @app.route('/')
@@ -108,6 +112,7 @@ def gestione_operai():
 def gestione_excel():
 
     if not session.get('logged_in'):
+        flash('Devi essere autenticato per accedere a questa pagina.')
         return redirect(url_for('login'))
     
     logging.info("Accesso alla rotta gestione_excel")
@@ -258,6 +263,7 @@ def gestione_attivita():
 @app.route('/gestione_foto_bolle', methods=['GET', 'POST'])
 def gestione_foto_bolle():
     if not session.get('logged_in'):
+        flash('Devi essere autenticato per accedere a questa pagina.')
         return redirect(url_for('login'))
     
     current_year = datetime.now().year
