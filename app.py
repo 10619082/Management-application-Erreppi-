@@ -12,6 +12,7 @@ from openpyxl.styles import Alignment, Font
 from openpyxl.utils import get_column_letter
 import shutil
 from forms import LoginForm  # Importa il form di login
+import json
 
 
 import xlsxwriter
@@ -21,6 +22,8 @@ load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY')  
+
+firebase_key_json = os.getenv('FIREBASE_KEY_JSON')
 
 app.debug = False
 
@@ -36,7 +39,7 @@ logging.basicConfig(level=logging.DEBUG if app.debug else logging.INFO)
 
 # Inizializza Firebase
 if not firebase_admin._apps:
-    cred = credentials.Certificate(os.getenv('FIREBASE_KEY_PATH'))
+    cred = credentials.Certificate(json.loads(firebase_key_json))
     firebase_admin.initialize_app(cred, {
         'storageBucket': os.getenv('FIREBASE_STORAGE_BUCKET'),
         'databaseURL': os.getenv('FIREBASE_DB_URL')  # Aggiungi l'URL del database in tempo reale
