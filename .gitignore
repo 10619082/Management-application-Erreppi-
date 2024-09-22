@@ -2,7 +2,6 @@
 .env
 firebase_key/
 test.py
-temp/
 venv
 
 # File di sistema e temporanei

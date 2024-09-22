@@ -57,6 +57,7 @@ def clean_temp_directory():
     except Exception as e:
         logging.error(f"Errore durante la pulizia della cartella temp: {e}")
 
+clean_temp_directory()
 
 
 # Rotta per il login
