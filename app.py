@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, url_for, send_from_directory, flash, request , jsonify
+from flask import Flask, render_template, redirect, url_for, send_from_directory, flash, request , jsonify, session
 import firebase_admin
 from firebase_admin import credentials, storage, firestore, db
 from datetime import datetime, timedelta
@@ -10,6 +10,9 @@ import openpyxl  # Libreria per gestire Excel
 from dotenv import load_dotenv
 from openpyxl.styles import Alignment, Font
 from openpyxl.utils import get_column_letter
+import shutil
+from forms import LoginForm  # Importa il form di login
+
 
 import xlsxwriter
 
@@ -20,6 +23,13 @@ app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY')  
 
 app.debug = False
+
+# Utente e password caricati dal file .env
+USER_NAME = os.getenv('USER_NAME')  # Nome utente personalizzato
+USER_PASSWORD = os.getenv('USER_PASSWORD')  # Password definita nel file .env
+
+print(f"User name: {USER_NAME}")
+print(f"User password: {USER_PASSWORD}")
 
 # Inizializza il logger
 logging.basicConfig(level=logging.DEBUG if app.debug else logging.INFO)
@@ -39,10 +49,48 @@ db_ref = db.reference("/Attivita/Utenti")
 TEMP_DIR = os.path.join(os.getcwd(), "temp")
 os.makedirs(TEMP_DIR, exist_ok=True)
 
+def clean_temp_directory():
+    try:
+        shutil.rmtree(TEMP_DIR)  # Rimuovi la directory temporanea e tutto il suo contenuto
+        os.makedirs(TEMP_DIR, exist_ok=True)  # Ricrea la directory vuota
+        logging.info("Cartella temp pulita con successo.")
+    except Exception as e:
+        logging.error(f"Errore durante la pulizia della cartella temp: {e}")
 
+
+
+# Rotta per il login
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+
+        # Verifica se l'username e la password corrispondono a quelli nel file .env
+        if username == USER_NAME and password == USER_PASSWORD:
+            session['user'] = username
+            return redirect(url_for('index'))
+        else:
+            flash('Credenziali non valide. Riprova.')
+
+    return render_template('login.html')
+
+# Rotta per l'homepage dopo il login
 @app.route('/')
 def index():
-    return render_template('index.html')
+    if 'user' in session:
+        clean_temp_directory()
+        return render_template('index.html')
+    else:
+        return redirect(url_for('login'))
+
+# Rotta per il logout
+@app.route('/logout')
+def logout():
+    session.pop('user', None)
+    flash('Sei stato disconnesso.')
+    return redirect(url_for('login'))
+
 
 @app.route('/gestione_cantieri')
 def gestione_cantieri():
@@ -54,6 +102,10 @@ def gestione_operai():
 
 @app.route('/gestione_excel', methods=['GET', 'POST'])
 def gestione_excel():
+
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+    
     logging.info("Accesso alla rotta gestione_excel")
     if request.method == 'POST':
         logging.info("Metodo POST chiamato")
@@ -75,6 +127,7 @@ def gestione_excel():
         # Restituisci il file Excel generato come risposta
         if file_path:
             return send_from_directory(TEMP_DIR, file_path, as_attachment=True)
+
 
     return render_template('gestione_excel.html')
 
@@ -200,6 +253,9 @@ def gestione_attivita():
 
 @app.route('/gestione_foto_bolle', methods=['GET', 'POST'])
 def gestione_foto_bolle():
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+    
     current_year = datetime.now().year
 
     years = list(range(2023, current_year + 1))
@@ -339,7 +395,18 @@ def create_zip(start_year, start_month, end_year, end_month):
 
 @app.route('/download_zip/<filename>')
 def download_zip(filename):
-    return send_from_directory(TEMP_DIR, filename, as_attachment=True)
+    response = send_from_directory(TEMP_DIR, filename, as_attachment=True)
+    return response
+
+
+def clean_temp_directory():
+    try:
+        shutil.rmtree(TEMP_DIR)  # Rimuovi la directory temporanea e tutto il suo contenuto
+        os.makedirs(TEMP_DIR, exist_ok=True)  # Ricrea la directory vuota
+        logging.info("Cartella temp pulita con successo.")
+    except Exception as e:
+        logging.error(f"Errore durante la pulizia della cartella temp: {e}")
+
 
 if __name__ == '__main__':
     app.run(debug=True)
