@@ -23,8 +23,10 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY')  
 
-firebase_key_json = os.getenv('FIREBASE_KEY_JSON')
+firebase_key_json = os.getenv('FIREBASE_KEY_JSON')  
 
+# Debug per verificare che il valore sia caricato correttamente
+print(firebase_key_json)
 app.debug = False
 
 # Utente e password caricati dal file .env
@@ -117,9 +119,14 @@ def gestione_excel():
     
     logging.info("Accesso alla rotta gestione_excel")
     if request.method == 'POST':
-        logging.info("Metodo POST chiamato")
         data_inizio = request.form['start_date']
         data_fine = request.form['end_date']
+
+        # Controllo se la data di fine è precedente alla data di inizio
+        if data_fine < data_inizio:
+            flash("La data di fine non può essere precedente alla data di inizio.")
+            return redirect(url_for('gestione_excel'))
+
         action = request.form['action']  # Può essere 'contabilita', 'completo', 'buste'
 
         logging.info(f"Data Inizio: {data_inizio}, Data Fine: {data_fine}, Azione: {action}")
@@ -136,7 +143,6 @@ def gestione_excel():
         # Restituisci il file Excel generato come risposta
         if file_path:
             return send_from_directory(TEMP_DIR, file_path, as_attachment=True)
-
 
     return render_template('gestione_excel.html')
 
@@ -420,3 +426,4 @@ def clean_temp_directory():
 
 if __name__ == '__main__':
     app.run(debug=True)
+

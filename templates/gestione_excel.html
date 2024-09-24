@@ -37,7 +37,8 @@
     <div class="container">
         <h1>Genera Foglio Excel</h1>
 
-        <form action="/gestione_excel" method="POST">
+        <!-- Modulo con il controllo lato client -->
+        <form id="excelForm" action="/gestione_excel" method="POST">
             <div class="form-group">
                 <label for="start_date">Data Inizio:</label>
                 <input type="date" class="form-control" id="start_date" name="start_date" required>
@@ -60,6 +61,19 @@
         <button onclick="window.location.href='/'" class="btn btn-warning mt-3">Indietro</button>
 
     </div>
+
+    <!-- Script per il controllo delle date -->
+    <script>
+        document.getElementById('excelForm').addEventListener('submit', function(event) {
+            const startDate = new Date(document.getElementById('start_date').value);
+            const endDate = new Date(document.getElementById('end_date').value);
+
+            if (endDate < startDate) {
+                alert("La data di fine non può essere precedente alla data di inizio.");
+                event.preventDefault();  // Impedisce l'invio del modulo
+            }
+        });
+    </script>
 
 </body>
 </html>
