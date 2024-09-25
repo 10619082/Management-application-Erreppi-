@@ -13,6 +13,7 @@ from openpyxl.utils import get_column_letter
 import shutil
 from forms import LoginForm  # Importa il form di login
 import json
+import uuid
 
 
 import xlsxwriter
@@ -107,6 +108,7 @@ def sostituisci_caratteri_non_ammessi(stringa):
     return stringa
 
 
+
 @app.route('/gestione_cantieri', methods=['GET', 'POST'])
 def gestione_cantieri():
     cantiere_ref = db.reference('Cantiere')
@@ -125,7 +127,14 @@ def gestione_cantieri():
             elif cantiere_ref.child(nome_cantiere).get():
                 flash("Questo cantiere esiste già.", "danger")
             else:
-                cantiere_ref.child(nome_cantiere).set({"nome": nome_cantiere})
+                # Genera un ID univoco
+                id_cantiere = str(uuid.uuid4())
+                # Usa il nome del cantiere come chiave e assegna l'ID generato
+                nuovo_cantiere_ref = cantiere_ref.child(nome_cantiere)
+                nuovo_cantiere_ref.set({
+                    "id": id_cantiere,  # Imposta l'ID generato
+                    "nome": nome_cantiere
+                })
                 flash("Cantiere inserito con successo!", "success")
 
         elif azione == 'elimina':
@@ -147,9 +156,73 @@ def gestione_cantieri():
 
 
 
-@app.route('/gestione_operai')
+
+
+
+from flask import render_template, request, redirect, url_for, flash, session
+from firebase_admin import db
+
+from flask import render_template, request, redirect, url_for, flash, session
+from firebase_admin import db
+
+from flask import render_template, request, redirect, url_for, flash, session
+from firebase_admin import db
+
+import uuid  # Per generare il campo uid univoco
+
+@app.route('/gestione_operai', methods=['GET', 'POST'])
 def gestione_operai():
-    return render_template('gestione_operai.html')
+    operai_ref = db.reference('Utente')
+
+    if request.method == 'POST':
+        azione = request.form.get('azione')  # Controlla se l'azione è 'inserisci' o 'elimina'
+
+        if azione == 'inserisci':
+            # Ottieni i dati dall'utente
+            nome_operaio = request.form.get('nome_operaio', '').strip()
+            cognome_operaio = request.form.get('cognome_operaio', '').strip()
+            costo_ora_operaio = request.form.get('costo_ora_operaio', '').strip()
+            password_operaio = request.form.get('password_operaio', '').strip()
+
+            # Verifica che i campi non siano vuoti
+            if not nome_operaio or not cognome_operaio or not costo_ora_operaio or not password_operaio:
+                flash("Tutti i campi devono essere compilati.", "danger")
+                return redirect(url_for('gestione_operai'))
+
+            # Genera email e uid
+            email_operaio = f"{nome_operaio}{cognome_operaio}".lower()
+            uid = str(uuid.uuid4())
+
+            # Inserisci il nuovo operaio nel database
+            operai_ref.child(email_operaio).set({
+                "nome": nome_operaio,
+                "cognome": cognome_operaio,
+                "costoOra": costo_ora_operaio,
+                "password": password_operaio,
+                "email": email_operaio,
+                "uid": uid,
+                "ruolo": "operaio"
+            })
+            flash("Operaio inserito con successo!", "success")
+
+        elif azione == 'elimina':
+            # Recupera l'email dell'operaio da eliminare
+            email_operaio = request.form.get('email_operaio')
+
+            if email_operaio:
+                # Elimina l'operaio dal database usando l'email
+                operai_ref.child(email_operaio).delete()
+                flash(f"Operaio con email {email_operaio} eliminato con successo!", "success")
+            else:
+                flash("Errore durante l'eliminazione dell'operaio.", "danger")
+
+        return redirect(url_for('gestione_operai'))
+
+    # Recupera l'elenco degli operai per mostrarli nella pagina
+    operai = operai_ref.get()
+    return render_template('gestione_operai.html', operai=operai)
+
+
 
 @app.route('/gestione_excel', methods=['GET', 'POST'])
 def gestione_excel():

@@ -1,1 +1,80 @@
-<button onclick="window.location.href='/'" class="btn btn-warning mt-3">Indietro</button>
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestione Operai</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1>Gestione Operai</h1>
+            <a href="{{ url_for('index') }}" class="btn btn-warning">Indietro</a>
+        </div>
+
+        <!-- Messaggio di notifica (flash messages) -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="alert alert-{{ messages[0][0] }} alert-dismissible fade show" role="alert">
+                    {{ messages[0][1] }}
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- Form per aggiungere un nuovo operaio -->
+        <form method="POST">
+            <div class="form-group">
+                <label for="nome_operaio">Nome Operaio:</label>
+                <input type="text" class="form-control" id="nome_operaio" name="nome_operaio" required>
+            </div>
+
+            <div class="form-group">
+                <label for="cognome_operaio">Cognome Operaio:</label>
+                <input type="text" class="form-control" id="cognome_operaio" name="cognome_operaio" required>
+            </div>
+
+            <div class="form-group">
+                <label for="costo_ora_operaio">Costo Ora:</label>
+                <input type="text" class="form-control" id="costo_ora_operaio" name="costo_ora_operaio" required>
+            </div>
+
+            <div class="form-group">
+                <label for="password_operaio">Password:</label>
+                <input type="password" class="form-control" id="password_operaio" name="password_operaio" required>
+            </div>
+
+            <button type="submit" class="btn btn-primary" name="azione" value="inserisci">Inserisci Operaio</button>
+        </form>
+
+        <!-- Elenco degli operai esistenti -->
+        <h2 class="mt-5">Operai Esistenti</h2>
+        <ul class="list-group">
+            {% if operai %}
+                {% for operaio_key, operaio_data in operai.items() %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        {{ operaio_data['nome'] }} {{ operaio_data['cognome'] }} ({{ operaio_data['email'] }})
+                        <form method="POST" style="margin: 0;" onsubmit="return confermaEliminazione();">
+                            <input type="hidden" name="email_operaio" value="{{ operaio_data['email'] }}">
+                            <button type="submit" class="btn btn-danger" name="azione" value="elimina">Elimina</button>
+                        </form>
+                    </li>
+                {% endfor %}
+            {% else %}
+                <li class="list-group-item">Nessun operaio disponibile.</li>
+            {% endif %}
+        </ul>
+    </div>
+
+    <script>
+        function confermaEliminazione() {
+            return confirm("Sei sicuro di voler eliminare questo operaio?");
+        }
+    </script>
+
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
