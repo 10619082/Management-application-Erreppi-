@@ -32,9 +32,6 @@ app.debug = False
 USER_NAME = os.getenv('USER_NAME')  # Nome utente personalizzato
 USER_PASSWORD = os.getenv('USER_PASSWORD')  # Password definita nel file .env
 
-print(f"User name: {USER_NAME}")
-print(f"User password: {USER_PASSWORD}")
-
 # Inizializza il logger
 logging.basicConfig(level=logging.DEBUG if app.debug else logging.INFO)
 
