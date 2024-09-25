@@ -5,12 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestione Foto Bolle</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    </style>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="https://unpkg.com/@panzoom/panzoom@4.4.4/dist/panzoom.min.js"></script> <!-- Libreria Panzoom -->
 </head>
 <body>
-    <div class="container">
-        <h1 class="mt-5">Gestione Foto Bolle</h1>
+    <div class="container mt-5">
+        <!-- Sezione titolo e pulsante "Indietro" allineati orizzontalmente -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h1>Gestione Foto Bolle</h1>
+            <a href="/" class="btn btn-warning">Indietro</a>
+        </div>
 
         <form id="foto_bolle_form" method="POST">
             <div class="form-group">
@@ -63,12 +68,13 @@
             <span id="loading_message" style="margin-left: 10px;">Attendere processamento foto...</span>
         </div>
 
+        <!-- Sezione Risultati -->
         <div class="mt-5">
-            <h2>Risultati {% if period %}: {{ period }} {% endif %}</h2> <!-- Visualizza il periodo -->
+            <h2>Risultati {% if period %}: {{ period }} {% endif %}</h2>
             <div class="d-flex flex-wrap">
                 {% if photo_urls %}
                 {% for url in photo_urls %}
-                <img src="{{ url }}" alt="Photo" class="img-thumbnail" style="width:150px; height:150px;">
+                <img src="{{ url }}" alt="Photo" class="img-thumbnail" style="width:150px; height:150px; cursor: pointer;" data-toggle="modal" data-target="#imageModal" data-img-src="{{ url }}">
                 {% endfor %}
                 {% else %}
                 <p>Nessuna foto trovata per il periodo selezionato.</p>
@@ -76,12 +82,48 @@
             </div>
         </div>
 
-
-        <button onclick="window.location.href='/'" class="btn btn-warning mt-3">Indietro</button>
-
+        <!-- Modal di Bootstrap per mostrare l'immagine ingrandita -->
+        <div class="modal fade" id="imageModal" tabindex="-1" role="dialog" aria-labelledby="imageModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="imageModalLabel">Visualizzazione Foto</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body text-center">
+                        <div id="zoomable-container">
+                            <!-- Inserisci qui il messaggio per indicare lo zoom -->
+                            <p class="text-muted">Usa il mouse per zoommare</p>
+                            <img id="modalImage" src="" alt="Photo" class="img-fluid">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
+        // Funzione per cambiare l'immagine della modale quando un'immagine viene cliccata
+        $('#imageModal').on('show.bs.modal', function (event) {
+            var button = $(event.relatedTarget);  // Bottone che ha attivato la modale (immagine)
+            var imgSrc = button.data('img-src');  // Prendi l'URL dell'immagine
+            var modal = $(this);
+            modal.find('#modalImage').attr('src', imgSrc);  // Imposta l'immagine nella modale
+
+            // Inizializza Panzoom sull'immagine della modale
+            const elem = document.getElementById('zoomable-container');
+            const panzoom = Panzoom(elem, {
+                maxScale: 5,  // Imposta lo zoom massimo
+                minScale: 1,  // Imposta lo zoom minimo
+                contain: 'outside'  // Permette lo spostamento anche fuori dai confini
+            });
+            
+            // Abilita lo zoom con la rotella del mouse
+            elem.addEventListener('wheel', panzoom.zoomWithWheel);
+        });
+
         $(document).ready(function() {
             $("#scarica_button").click(function() {
                 // Mostra lo spinner e il messaggio di caricamento
@@ -91,22 +133,17 @@
                 // Esegui l'invio del form con AJAX
                 $.ajax({
                     type: "POST",
-                    url: "/gestione_foto_bolle",  // Questo invia la richiesta a Flask per generare il file ZIP
+                    url: "/gestione_foto_bolle",
                     data: $("#foto_bolle_form").serialize() + '&action=Scarica Foto',
                     success: function(response) {
-                        // Nascondi lo spinner e il messaggio
                         $("#loading_spinner").hide();
-
                         if (response.zip_url) {
-                            // Reindirizza per il download del file ZIP
                             window.location.href = response.zip_url;
                         } else if (response.error) {
-                            // Mostra l'errore se non ci sono foto
                             alert(response.error);
                         }
                     },
                     error: function() {
-                        // Nascondi lo spinner anche in caso di errore
                         $("#loading_spinner").hide();
                         alert("Errore durante il download.");
                     }

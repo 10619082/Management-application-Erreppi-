@@ -1,1 +1,50 @@
-<button onclick="window.location.href='/'" class="btn btn-warning mt-3">Indietro</button>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestione Cantieri</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <!-- Sezione titolo e pulsante "Indietro" allineati orizzontalmente -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h1>Gestione Cantieri</h1>
+            <a href="{{ url_for('index') }}" class="btn btn-warning">Indietro</a>
+        </div>
+
+        <!-- Form per inserire un nuovo cantiere -->
+        <form action="{{ url_for('gestione_cantieri') }}" method="POST">
+            <div class="form-group">
+                <label for="nome_cantiere">Nome Cantiere:</label>
+                <input type="text" class="form-control" id="nome_cantiere" name="nome_cantiere" required>
+            </div>
+
+            <!-- Pulsante per inserire un nuovo cantiere -->
+            <button type="submit" class="btn btn-primary" name="azione" value="inserisci">Inserisci Cantiere</button>
+        </form>
+
+        <!-- Elenco dei cantieri esistenti -->
+        <h2 class="mt-5">Cantieri Esistenti</h2>
+        <ul class="list-group">
+            {% if cantieri %}
+                {% for cantiere, dati in cantieri.items() %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        {{ dati['nome'] }}
+                        <!-- Bottone per eliminare solo i cantieri dalla lista -->
+                        <form action="{{ url_for('gestione_cantieri') }}" method="POST" class="d-inline">
+                            <input type="hidden" name="nome_cantiere" value="{{ dati['nome'] }}">
+                            <button type="submit" class="btn btn-danger btn-sm" name="azione" value="elimina">Elimina</button>
+                        </form>
+                    </li>
+                {% endfor %}
+            {% else %}
+                <li class="list-group-item">Nessun cantiere disponibile.</li>
+            {% endif %}
+        </ul>
+    </div>
+
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>

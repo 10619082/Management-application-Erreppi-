@@ -26,7 +26,6 @@ app.secret_key = os.getenv('SECRET_KEY')
 firebase_key_json = os.getenv('FIREBASE_KEY_JSON')  
 
 # Debug per verificare che il valore sia caricato correttamente
-print(firebase_key_json)
 app.debug = False
 
 # Utente e password caricati dal file .env
@@ -101,10 +100,55 @@ def logout():
     flash('Sei stato disconnesso.')
     return redirect(url_for('login'))
 
+def sostituisci_caratteri_non_ammessi(stringa):
+    caratteri_non_ammessi = {'.', '$', '[', ']', '/', '#', '$', ','}
+    carattere_sostitutivo = '_'
+    
+    for carattere in caratteri_non_ammessi:
+        stringa = stringa.replace(carattere, carattere_sostitutivo)
+    
+    return stringa
 
-@app.route('/gestione_cantieri')
+
+@app.route('/gestione_cantieri', methods=['GET', 'POST'])
 def gestione_cantieri():
-    return render_template('gestione_cantieri.html')
+    cantiere_ref = db.reference('Cantiere')
+
+    if request.method == 'POST':
+        azione = request.form.get('azione')  # "Inserisci" o "Elimina"
+        nome_cantiere = request.form.get('nome_cantiere').strip()
+
+        # Sostituisci caratteri non ammessi nei nomi
+        nome_cantiere = sostituisci_caratteri_non_ammessi(nome_cantiere)
+
+        if azione == 'inserisci':
+            # Inserisci nuovo cantiere
+            if not nome_cantiere:
+                flash("Il nome del cantiere non può essere vuoto.", "danger")
+            elif cantiere_ref.child(nome_cantiere).get():
+                flash("Questo cantiere esiste già.", "danger")
+            else:
+                cantiere_ref.child(nome_cantiere).set({"nome": nome_cantiere})
+                flash("Cantiere inserito con successo!", "success")
+
+        elif azione == 'elimina':
+            # Elimina cantiere esistente
+            if not nome_cantiere:
+                flash("Devi specificare il cantiere da eliminare.", "danger")
+            elif not cantiere_ref.child(nome_cantiere).get():
+                flash("Il cantiere da eliminare non esiste.", "danger")
+            else:
+                cantiere_ref.child(nome_cantiere).delete()
+                flash("Cantiere eliminato con successo!", "success")
+
+        return redirect(url_for('gestione_cantieri'))
+
+    # Recupera l'elenco dei cantieri per mostrarli nella pagina
+    cantieri = cantiere_ref.get()
+    return render_template('gestione_cantieri.html', cantieri=cantieri)
+
+
+
 
 @app.route('/gestione_operai')
 def gestione_operai():
