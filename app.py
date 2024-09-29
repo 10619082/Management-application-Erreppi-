@@ -9,9 +9,11 @@ from dotenv import load_dotenv
 import shutil
 import json
 import uuid
-
-import uuid  # Per generare il campo uid univoco
-
+from datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta
+import plotly.graph_objs as go
+from collections import defaultdict
+import plotly
 
 import xlsxwriter
 
@@ -22,7 +24,6 @@ app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY')  
 
 firebase_key_json = os.getenv('FIREBASE_KEY_JSON')  
-
 
 # Debug per verificare che il valore sia caricato correttamente
 app.debug = False
@@ -826,8 +827,6 @@ def pioggia_vento_activity(email):
 
     return render_template('pioggia_vento_activity.html', email=email, opzioni=opzioni_pioggia_vento, cantieri=cantieri)
 
-from datetime import datetime
-
 @app.route('/modifica_attivita/<email>', methods=['GET', 'POST'])
 def modifica_attivita(email):
     if not session.get('logged_in'):
@@ -862,33 +861,6 @@ def modifica_attivita(email):
     # Rendi disponibile la lista di attività nella pagina HTML
     return render_template('modifica_attivita.html', email=email, attivita_list=attivita_list)
 
-
-
-# @app.route('/modifica_attivita/<email>', methods=['GET', 'POST'])
-# def modifica_attivita(email):
-#     if not session.get('logged_in'):
-#         flash('Devi essere autenticato per accedere a questa pagina.')
-#         return redirect(url_for('login'))
-
-#     # Sostituisci i caratteri non permessi per accedere correttamente al database
-#     operaio_email = email.replace('.', '_').replace('@', '-')
-    
-#     # Riferimento al database Firebase per l'utente
-#     attivita_ref = db.reference(f'Attivita/Utenti/{operaio_email}')
-#     attivita_snapshot = attivita_ref.get()
-
-#     # Lista per salvare tutte le attività
-#     attivita_list = []
-    
-#     if attivita_snapshot:
-#         for attivita_id, attivita_data in attivita_snapshot.items():
-#             attivita_data['id'] = attivita_id  # Associa l'ID dell'attività ai dati
-#             attivita_list.append(attivita_data)  # Aggiungi l'attività alla lista
-
-#     # Rendi disponibile la lista di attività nella pagina HTML
-#     return render_template('modifica_attivita.html', email=email, attivita_list=attivita_list)
-
-from datetime import datetime
 
 @app.route('/edit_attivita/<email>/<attivita_id>', methods=['GET', 'POST'])
 def edit_attivita(email, attivita_id):
@@ -954,6 +926,80 @@ def delete_attivita(email, attivita_id):
     flash('Attività eliminata con successo!')
     return redirect(url_for('modifica_attivita', email=email))
 
+
+
+@app.route('/performance_operai', methods=['GET', 'POST'])
+def performance_operai():
+    # Imposta il mese e l'anno correnti come predefiniti
+    oggi = datetime.today()
+    mese = oggi.month
+    anno = oggi.year
+
+    if request.method == 'POST':
+        # Recupera il mese e l'anno selezionati dall'utente
+        mese = int(request.form.get('mese', mese))
+        anno = int(request.form.get('anno', anno))
+
+    # Calcola il primo e l'ultimo giorno del mese selezionato
+    primo_giorno_mese = datetime(anno, mese, 1)
+    ultimo_giorno_mese = (primo_giorno_mese + relativedelta(months=1)) - timedelta(days=1)
+
+    # Recupera gli operai dal database
+    operai_ref = db.reference('Utente')
+    operai_snapshot = operai_ref.get()
+    operai = {email: dati for email, dati in operai_snapshot.items() if dati.get('ruolo') == 'operaio'}
+
+    # Recupera le attività nel mese selezionato
+    attivita_ref = db.reference('Attivita/Utenti')
+    attivita_snapshot = attivita_ref.get()
+
+    # Organizza le attività per giorno e operaio
+    attivita_per_operai = {}
+    for operaio_email, attività_operaio in attivita_snapshot.items():
+        attivita_per_giorno = {}
+        for attivita_id, attivita in attività_operaio.items():
+            if attivita['operaio'].split('@')[0] in operai.keys():
+                data_attivita = datetime.strptime(attivita['data'], '%d/%m/%Y')
+                if primo_giorno_mese <= data_attivita <= ultimo_giorno_mese:
+                    giorno = data_attivita.day
+                    attivita_per_giorno[giorno] = attivita
+        if len(attivita_per_giorno) != 0:
+            attivita_per_operai[operaio_email.split('-')[0]] = attivita_per_giorno
+
+    # Calcola quanti giorni ci sono nel mese selezionato
+    days_in_month = ultimo_giorno_mese.day
+
+    # Calcolo delle foto per mese
+    foto_per_mese = defaultdict(int)
+
+    for month in range(1, 13):
+        blobs = list(bucket.list_blobs(prefix=f"DDT/{anno}/{month}/"))
+        foto_per_mese[month] = len(blobs)  # Conteggio delle foto per ogni mese
+
+    # Creazione dell'istogramma con Plotly
+    mesi_nomi = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre']
+    fig = go.Figure([go.Bar(x=mesi_nomi, y=[foto_per_mese[mese] for mese in range(1, 13)])])
+
+    # Aggiorna il layout del grafico per includere l'etichetta dell'asse y
+    fig.update_layout(
+        xaxis_title="Mesi",
+        yaxis_title="Conteggio Foto",  # Asse y in italiano
+        plot_bgcolor='rgba(0,0,0,0)'  # Sfondo trasparente
+    )
+
+    # Convertire il grafico in JSON per poterlo passare al template
+    graph_json = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
+    return render_template(
+        'performance_operai.html',
+        operai=operai,
+        attivita_per_operai=attivita_per_operai,
+        mese=mese,
+        anno=anno,
+        days_in_month=days_in_month,
+        mese_primo_giorno=primo_giorno_mese,
+        oggi=oggi,
+        graph_json=graph_json  # Passiamo l'istogramma al template
+    )
 
 
 if __name__ == '__main__':

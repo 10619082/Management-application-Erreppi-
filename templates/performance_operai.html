@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Performance Operai</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        .calendar {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);  /* Imposta 7 colonne per i giorni della settimana */
+            gap: 5px;  /* Riduce lo spazio tra i giorni */
+            margin-bottom: 20px;
+        }
+        .day {
+            padding: 8px;  /* Riduce il padding interno */
+            text-align: center;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;  /* Riduce la dimensione del testo */
+        }
+        .day.green {
+            background-color: #28a745;
+            color: white;
+        }
+        .day.red {
+            background-color: #dc3545;
+            color: white;
+        }
+        .day.empty {
+            visibility: hidden;  /* Nascondi i giorni vuoti che non fanno parte del mese corrente */
+        }
+        .weekday {
+            font-weight: bold;
+            background-color: #f1f1f1;
+            padding: 8px;  /* Riduce il padding per i giorni della settimana */
+            text-align: center;
+            border: 1px solid #ddd;
+            font-size: 14px;  /* Riduce la dimensione del testo per i giorni della settimana */
+        }
+        .calendar-header {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 18px;  /* Riduce la dimensione del titolo del calendario */
+        }
+        .form-inline {
+            display: flex;
+            justify-content: flex-start;  /* Allinea a sinistra */
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .calendar-container {
+            border: 2px solid #ddd;  /* Aggiunge un bordo intorno a ogni calendario */
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+        }
+        .calendar-row {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .form-group label {
+            font-size: 16px;
+            margin-right: 10px;
+        }
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        h1 {
+            margin-bottom: 0;  /* Rimuovi il margine inferiore per allineare meglio il titolo */
+        }
+        #histogram {
+            width: 100%;
+            height: 500px;
+            margin-top: 40px;
+        }
+        .title-histogram {
+            text-align: center;
+            font-size: 24px;
+            margin-top: 40px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <!-- Header con titolo e pulsante Indietro -->
+        <div class="header-container">
+            <h1 class="text-center">Giornate registrate per operaio - {{ mese }}/{{ anno }}</h1>
+            <a href="{{ url_for('index') }}" class="btn btn-warning">Indietro</a>
+        </div>
+
+        <!-- Form per selezionare il mese e l'anno -->
+        <form method="POST" class="form-inline mb-4">
+            <div class="form-group mx-3">
+                <label for="mese">Mese:</label>
+                <select name="mese" id="mese" class="form-control ml-2">
+                    {% set mesi_nomi = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'] %}
+                    {% for i in range(1, 13) %}
+                    <option value="{{ i }}" {% if i == mese %}selected{% endif %}>{{ mesi_nomi[i-1] }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group mx-3">
+                <label for="anno">Anno:</label>
+                <select name="anno" id="anno" class="form-control ml-2">
+                    {% for i in range(oggi.year - 5, oggi.year + 1) %}
+                    <option value="{{ i }}" {% if i == anno %}selected{% endif %}>{{ i }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary mx-3">Aggiorna</button>
+        </form>
+
+        <!-- Sezione con i calendari degli operai -->
+        <div class="calendar-row">
+            {% for email, operaio in operai.items() %}
+            <div class="col-md-4 calendar-container">
+                <h3 class="calendar-header">{{ operaio['nome'] }} {{ operaio['cognome'] }}</h3>
+                <div class="calendar">
+                    {# Giorni della settimana #}
+                    <div class="weekday">Lun</div>
+                    <div class="weekday">Mar</div>
+                    <div class="weekday">Mer</div>
+                    <div class="weekday">Gio</div>
+                    <div class="weekday">Ven</div>
+                    <div class="weekday">Sab</div>
+                    <div class="weekday">Dom</div>
+
+                    {# Calcolo del primo giorno della settimana per il mese corrente #}
+                    {% set primo_giorno_settimana = mese_primo_giorno.weekday() %}
+
+                    {# Crea celle vuote per i giorni che non fanno parte del mese corrente, prima del primo giorno #}
+                    {% for _ in range(primo_giorno_settimana) %}
+                        <div class="day empty"></div>
+                    {% endfor %}
+
+                    {# Ciclo sui giorni del mese corrente #}
+                    {% set attivita = attivita_per_operai.get(email, {}) %}
+                    {% for day in range(1, days_in_month + 1) %}
+                        {% if attivita.get(day) %}
+                            <div class="day green">{{ day }}</div>
+                        {% else %}
+                            <div class="day red">{{ day }}</div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Titolo per l'istogramma -->
+        <h2 class="title-histogram" style="font-size: 36px; font-weight: bold;">Conteggio foto bolle caricate nell'anno: {{ anno }}</h2>
+
+        <!-- Istogramma sotto i calendari -->
+        <div id="histogram"></div>
+
+        <script>
+            var graphData = {{ graph_json|safe }};
+            Plotly.newPlot('histogram', graphData.data, graphData.layout);
+        </script>
+    </div>
+</body>
+</html>
