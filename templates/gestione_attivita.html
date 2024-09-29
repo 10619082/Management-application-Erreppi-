@@ -1,1 +1,40 @@
-<button onclick="window.location.href='/'" class="btn btn-warning mt-3">Indietro</button>
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestione Attività Operai</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+<div class="container mt-5">
+    <!-- Wrapper per il titolo e il tasto "Indietro" allineati orizzontalmente -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Gestione Attività Operai</h1>
+        <a href="{{ url_for('index') }}" class="btn btn-warning">Indietro</a>
+    </div>
+
+    <!-- Lista degli operai -->
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Nome</th>
+                <th>Cognome</th>
+                <th class="text-right">Azione</th> <!-- Allineamento a destra -->
+            </tr>
+        </thead>
+        <tbody>
+            {% for email, operaio in operai.items() %}
+            <tr>
+                <td>{{ operaio['nome'] }}</td>
+                <td>{{ operaio['cognome'] }}</td>
+                <td class="text-right"> <!-- Allineamento a destra -->
+                    <a href="{{ url_for('modifica_attivita', email=operaio['email']) }}" class="btn btn-primary">Modifica Attività</a>
+                    <a href="{{ url_for('nuova_attivita_operaio', email=operaio['email']) }}" class="btn btn-success">Aggiungi Nuova Attività</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

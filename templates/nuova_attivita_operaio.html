@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>Nuova Attività per {{ operaio['nome'] }} {{ operaio['cognome'] }}</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        .header-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .btn-block-custom {
+            width: 100%;
+            margin-bottom: 15px;
+            padding: 15px;
+            font-size: 1.2em;
+        }
+        .btn-block-custom-last {
+            margin-bottom: 0;
+        }
+    </style>
+</head>
+<body>
+<div class="container mt-5">
+    <!-- Sezione titolo e tasto Indietro allineati -->
+    <div class="header-section">
+        <h1>Nuova Attività per {{ operaio['nome'] }} {{ operaio['cognome'] }}</h1>
+        <a href="{{ url_for('gestione_attivita') }}" class="btn btn-warning">Indietro</a>
+    </div>
+
+    <form method="POST">
+        <button type="submit" name="azione" value="inserisci_complete" class="btn btn-primary btn-block-custom">Aggiungi Nuova Giornata di Lavoro</button>
+        <button type="submit" name="azione" value="ferie_permessi" class="btn btn-secondary btn-block-custom">Ferie / Permessi</button>
+        <button type="submit" name="azione" value="pioggia_vento" class="btn btn-info btn-block-custom btn-block-custom-last">Pioggia / Vento</button>
+    </form>
+</div>
+</body>
+</html>

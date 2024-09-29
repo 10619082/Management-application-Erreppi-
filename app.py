@@ -1,19 +1,16 @@
 from flask import Flask, render_template, redirect, url_for, send_from_directory, flash, request , jsonify, session
 import firebase_admin
-from firebase_admin import credentials, storage, firestore, db
+from firebase_admin import credentials, storage, auth, db
 from datetime import datetime, timedelta
 import os
-import io
 import zipfile
 import logging
-import openpyxl  # Libreria per gestire Excel
 from dotenv import load_dotenv
-from openpyxl.styles import Alignment, Font
-from openpyxl.utils import get_column_letter
 import shutil
-from forms import LoginForm  # Importa il form di login
 import json
 import uuid
+
+import uuid  # Per generare il campo uid univoco
 
 
 import xlsxwriter
@@ -25,6 +22,8 @@ app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY')  
 
 firebase_key_json = os.getenv('FIREBASE_KEY_JSON')  
+
+
 
 # Debug per verificare che il valore sia caricato correttamente
 app.debug = False
@@ -154,22 +153,6 @@ def gestione_cantieri():
     return render_template('gestione_cantieri.html', cantieri=cantieri)
 
 
-
-
-
-
-
-from flask import render_template, request, redirect, url_for, flash, session
-from firebase_admin import db
-
-from flask import render_template, request, redirect, url_for, flash, session
-from firebase_admin import db
-
-from flask import render_template, request, redirect, url_for, flash, session
-from firebase_admin import db
-
-import uuid  # Per generare il campo uid univoco
-
 @app.route('/gestione_operai', methods=['GET', 'POST'])
 def gestione_operai():
     operai_ref = db.reference('Utente')
@@ -189,32 +172,60 @@ def gestione_operai():
                 flash("Tutti i campi devono essere compilati.", "danger")
                 return redirect(url_for('gestione_operai'))
 
-            # Genera email e uid
-            email_operaio = f"{nome_operaio}{cognome_operaio}".lower()
-            uid = str(uuid.uuid4())
+            # Genera email
+            email_operaio = f"{nome_operaio}{cognome_operaio}".lower() + "@mail.com"
 
-            # Inserisci il nuovo operaio nel database
-            operai_ref.child(email_operaio).set({
-                "nome": nome_operaio,
-                "cognome": cognome_operaio,
-                "costoOra": costo_ora_operaio,
-                "password": password_operaio,
-                "email": email_operaio,
-                "uid": uid,
-                "ruolo": "operaio"
-            })
-            flash("Operaio inserito con successo!", "success")
+            try:
+                # Crea l'utente in Firebase Authentication
+                user = auth.create_user(
+                    email=email_operaio,
+                    password=password_operaio,
+                    display_name=f"{nome_operaio} {cognome_operaio}"
+                )
+
+                # Ottieni l'UID dell'utente creato
+                uid = user.uid
+
+                # Inserisci il nuovo operaio nel database
+                operai_ref.child(nome_operaio+cognome_operaio).set({
+                    "nome": nome_operaio,
+                    "cognome": cognome_operaio,
+                    "costoOra": costo_ora_operaio,
+                    "password": password_operaio,  # Se devi memorizzare la password (opzionale, non raccomandato)
+                    "email": nome_operaio+cognome_operaio,
+                    "uid": uid,
+                    "ruolo": "operaio"
+                })
+
+                flash("Operaio inserito con successo!", "success")
+            except Exception as e:
+                flash(f"Errore durante la creazione dell'utente: {str(e)}", "danger")
+                return redirect(url_for('gestione_operai'))
+
 
         elif azione == 'elimina':
             # Recupera l'email dell'operaio da eliminare
             email_operaio = request.form.get('email_operaio')
 
             if email_operaio:
-                # Elimina l'operaio dal database usando l'email
-                operai_ref.child(email_operaio).delete()
-                flash(f"Operaio con email {email_operaio} eliminato con successo!", "success")
+                try:
+                    # Recupera l'UID dell'operaio dal database
+                    operaio = operai_ref.child(email_operaio).get()
+                    uid = operaio.get('uid')
+
+                    if uid:
+                        # Elimina l'utente da Firebase Authentication
+                        auth.delete_user(uid)
+                        flash(f"Utenza per {email_operaio} eliminata con successo da Firebase Authentication!", "success")
+
+                    # Elimina l'operaio dal database usando l'email
+                    operai_ref.child(email_operaio).delete()
+                    flash(f"Operaio con email {email_operaio} eliminato con successo!", "success")
+                except Exception as e:
+                    flash(f"Errore durante l'eliminazione dell'utenza o dell'operaio: {str(e)}", "danger")
             else:
                 flash("Errore durante l'eliminazione dell'operaio.", "danger")
+
 
         return redirect(url_for('gestione_operai'))
 
@@ -376,10 +387,6 @@ def generate_excel_buste(attivita_list, inizio, fine):
     return file_name
 
 
-@app.route('/gestione_attivita')
-def gestione_attivita():
-    return render_template('gestione_attivita.html')
-
 @app.route('/gestione_foto_bolle', methods=['GET', 'POST'])
 def gestione_foto_bolle():
     if not session.get('logged_in'):
@@ -536,6 +543,360 @@ def clean_temp_directory():
         logging.info("Cartella temp pulita con successo.")
     except Exception as e:
         logging.error(f"Errore durante la pulizia della cartella temp: {e}")
+
+
+@app.route('/gestione_attivita', methods=['GET', 'POST'])
+def gestione_attivita():
+    if not session.get('logged_in'):
+        flash('Devi essere autenticato per accedere a questa pagina.')
+        return redirect(url_for('login'))
+
+    operai_ref = db.reference('Utente')
+    operai_snapshot = operai_ref.get()
+
+    # Filtra solo gli operai (ruolo 'operaio')
+    operai = {}
+    if operai_snapshot:
+        for email, data in operai_snapshot.items():
+            if data.get('ruolo') == 'operaio':
+                operai[email] = data
+
+    return render_template('gestione_attivita.html', operai=operai)
+
+
+@app.route('/nuova_attivita_operaio/<email>', methods=['GET', 'POST'])
+def nuova_attivita_operaio(email):
+    if not session.get('logged_in'):
+        flash('Devi essere autenticato per accedere a questa pagina.')
+        return redirect(url_for('login'))
+
+    # Recupera i dati dell'operaio
+    operaio_ref = db.reference('Utente').child(email.replace('.', '_').replace('@', '-'))
+    operaio = operaio_ref.get()
+
+    if request.method == 'POST':
+        azione = request.form.get('azione')
+        if azione == 'inserisci_complete':
+            return redirect(url_for('inserisci_complete_activity', email=email))
+        elif azione == 'ferie_permessi':
+            return redirect(url_for('ferie_permessi_activity', email=email))
+        elif azione == 'pioggia_vento':
+            return redirect(url_for('pioggia_vento_activity', email=email))
+
+    return render_template('nuova_attivita_operaio.html', operaio=operaio)
+
+@app.route('/inserisci_complete_activity/<email>', methods=['GET', 'POST'])
+def inserisci_complete_activity(email):
+    if not session.get('logged_in'):
+        flash('Devi essere autenticato per accedere a questa pagina.')
+        return redirect(url_for('login'))
+
+    # Recupera la lista dei cantieri
+    cantiere_ref = db.reference('Cantiere')
+    cantieri_snapshot = cantiere_ref.get()
+    cantieri = ['Seleziona Cantiere']
+    if cantieri_snapshot:
+        cantieri.extend(cantieri_snapshot.keys())
+
+    if request.method == 'POST':
+        data = request.form.get('data')
+        cantiere_selezionato = request.form.get('cantiere')
+        ore = request.form.get('ore')
+        lavorazione = request.form.get('lavorazione')
+
+        errors = []
+        if not data:
+            errors.append("Seleziona una data.")
+        if not cantiere_selezionato or cantiere_selezionato == 'Seleziona Cantiere':
+            errors.append("Seleziona un cantiere.")
+        if not ore:
+            errors.append("Inserisci le ore lavorate.")
+        if not lavorazione:
+            errors.append("Inserisci una descrizione della lavorazione.")
+
+        if errors:
+            for error in errors:
+                flash(error, 'danger')
+        else:
+            # Converti la data al formato "giorno/mese/anno" senza zeri iniziali
+            try:
+                # Assumi che il formato della data sia 'YYYY-MM-DD' dall'input (puoi adattarlo al formato del form se diverso)
+                parsed_data = datetime.strptime(data, '%Y-%m-%d')
+                # Usa f-string per formattare manualmente la data senza zeri iniziali
+                data = f"{parsed_data.day}/{parsed_data.month}/{parsed_data.year}"
+            except ValueError:
+                flash("Formato data non valido. Inserisci una data corretta.", 'danger')
+                return redirect(url_for('inserisci_complete_activity', email=email))
+
+            # Salva l'attività su Firebase
+            
+            operaio_email = email + '-mail_com'
+            attivita_ref = db.reference('Attivita').child('Utenti').child(operaio_email)
+            nuovo_id = attivita_ref.push().key
+
+            attivita_data = {
+                'id': nuovo_id,
+                'data': data,
+                'cantiere': cantiere_selezionato,
+                'operaio': email,
+                'ore': ore,
+                'lavorazione': lavorazione,
+            }
+
+            attivita_ref.child(nuovo_id).set(attivita_data)
+            flash("Attività salvata con successo!", 'success')
+            return redirect(url_for('gestione_attivita'))
+
+    return render_template('inserisci_complete_activity.html', email=email, cantieri=cantieri)
+
+
+@app.route('/ferie_permessi_activity/<email>', methods=['GET', 'POST'])
+def ferie_permessi_activity(email):
+    if not session.get('logged_in'):
+        flash('Devi essere autenticato per accedere a questa pagina.')
+        return redirect(url_for('login'))
+
+    opzioni_ferie_permesso = ['Seleziona Ferie o Permesso', 'Ferie', 'Permesso']
+
+    if request.method == 'POST':
+        data = request.form.get('data')
+        ore = request.form.get('ore')
+        ferie_permesso = request.form.get('ferie_permesso')
+
+        errors = []
+        if not data:
+            errors.append("Seleziona una data.")
+        if not ore:
+            errors.append("Inserisci le ore.")
+        if not ferie_permesso or ferie_permesso == 'Seleziona Ferie o Permesso':
+            errors.append("Seleziona Ferie o Permesso.")
+
+        if errors:
+            for error in errors:
+                flash(error, 'danger')
+        else:
+
+            try:
+                # Assumi che il formato della data sia 'YYYY-MM-DD' dall'input (puoi adattarlo al formato del form se diverso)
+                parsed_data = datetime.strptime(data, '%Y-%m-%d')
+                # Usa f-string per formattare manualmente la data senza zeri iniziali
+                data = f"{parsed_data.day}/{parsed_data.month}/{parsed_data.year}"
+            except ValueError:
+                flash("Formato data non valido. Inserisci una data corretta.", 'danger')
+                return redirect(url_for('inserisci_complete_activity', email=email))
+            
+            # Salva l'attività su Firebase
+            operaio_email = email + '-mail_com'
+            attivita_ref = db.reference('Attivita').child('Utenti').child(operaio_email)
+            nuovo_id = attivita_ref.push().key
+
+            attivita_data = {
+                'id': nuovo_id,
+                'data': data,
+                'operaio': email,
+                'ore': ore,
+                'ferie_permesso': ferie_permesso,
+            }
+
+            attivita_ref.child(nuovo_id).set(attivita_data)
+            flash("Attività salvata con successo!", 'success')
+            return redirect(url_for('gestione_attivita'))
+
+    return render_template('ferie_permessi_activity.html', email=email, opzioni=opzioni_ferie_permesso)
+
+@app.route('/pioggia_vento_activity/<email>', methods=['GET', 'POST'])
+def pioggia_vento_activity(email):
+    if not session.get('logged_in'):
+        flash('Devi essere autenticato per accedere a questa pagina.')
+        return redirect(url_for('login'))
+
+    opzioni_pioggia_vento = ['Seleziona Pioggia o Vento', 'Pioggia', 'Vento']
+
+    # Recupera la lista dei cantieri
+    cantiere_ref = db.reference('Cantiere')
+    cantieri_snapshot = cantiere_ref.get()
+    cantieri = ['Seleziona Cantiere']
+    if cantieri_snapshot:
+        cantieri.extend(cantieri_snapshot.keys())
+
+    if request.method == 'POST':
+        data = request.form.get('data')
+        cantiere_selezionato = request.form.get('cantiere')
+        ore = request.form.get('ore')
+        pioggia_vento = request.form.get('pioggia_vento')
+
+        errors = []
+        if not data:
+            errors.append("Seleziona una data.")
+        if not cantiere_selezionato or cantiere_selezionato == 'Seleziona Cantiere':
+            errors.append("Seleziona un cantiere.")
+        if not ore:
+            errors.append("Inserisci le ore.")
+        if not pioggia_vento or pioggia_vento == 'Seleziona Pioggia o Vento':
+            errors.append("Seleziona Pioggia o Vento.")
+
+        if errors:
+            for error in errors:
+                flash(error, 'danger')
+        else:
+
+            try:
+                # Assumi che il formato della data sia 'YYYY-MM-DD' dall'input (puoi adattarlo al formato del form se diverso)
+                parsed_data = datetime.strptime(data, '%Y-%m-%d')
+                # Usa f-string per formattare manualmente la data senza zeri iniziali
+                data = f"{parsed_data.day}/{parsed_data.month}/{parsed_data.year}"
+            except ValueError:
+                flash("Formato data non valido. Inserisci una data corretta.", 'danger')
+                return redirect(url_for('inserisci_complete_activity', email=email))
+            
+            # Salva l'attività su Firebase
+            operaio_email = email + '-mail_com'
+            attivita_ref = db.reference('Attivita').child('Utenti').child(operaio_email)
+            nuovo_id = attivita_ref.push().key
+
+            attivita_data = {
+                'id': nuovo_id,
+                'data': data,
+                'cantiere': cantiere_selezionato,
+                'operaio': email,
+                'ore': ore,
+                'pioggia_vento': pioggia_vento,
+            }
+
+            attivita_ref.child(nuovo_id).set(attivita_data)
+            flash("Attività salvata con successo!", 'success')
+            return redirect(url_for('gestione_attivita'))
+
+    return render_template('pioggia_vento_activity.html', email=email, opzioni=opzioni_pioggia_vento, cantieri=cantieri)
+
+from datetime import datetime
+
+@app.route('/modifica_attivita/<email>', methods=['GET', 'POST'])
+def modifica_attivita(email):
+    if not session.get('logged_in'):
+        flash('Devi essere autenticato per accedere a questa pagina.')
+        return redirect(url_for('login'))
+
+    # Sostituisci i caratteri non permessi per accedere correttamente al database
+    operaio_email = email + '-mail_com'
+    
+    # Riferimento al database Firebase per l'utente
+    attivita_ref = db.reference(f'Attivita/Utenti/{operaio_email}')
+    attivita_snapshot = attivita_ref.get()
+
+    # Lista per salvare tutte le attività
+    attivita_list = []
+    
+    if attivita_snapshot:
+        for attivita_id, attivita_data in attivita_snapshot.items():
+            attivita_data['id'] = attivita_id  # Associa l'ID dell'attività ai dati
+            attivita_list.append(attivita_data)  # Aggiungi l'attività alla lista
+
+    # Funzione per convertire la data in un oggetto datetime
+    def parse_date(attivita):
+        try:
+            return datetime.strptime(attivita['data'], '%d/%m/%Y')
+        except ValueError:
+            return None
+
+    # Ordina la lista per data in ordine decrescente
+    attivita_list.sort(key=parse_date, reverse=True)
+
+    # Rendi disponibile la lista di attività nella pagina HTML
+    return render_template('modifica_attivita.html', email=email, attivita_list=attivita_list)
+
+
+
+# @app.route('/modifica_attivita/<email>', methods=['GET', 'POST'])
+# def modifica_attivita(email):
+#     if not session.get('logged_in'):
+#         flash('Devi essere autenticato per accedere a questa pagina.')
+#         return redirect(url_for('login'))
+
+#     # Sostituisci i caratteri non permessi per accedere correttamente al database
+#     operaio_email = email.replace('.', '_').replace('@', '-')
+    
+#     # Riferimento al database Firebase per l'utente
+#     attivita_ref = db.reference(f'Attivita/Utenti/{operaio_email}')
+#     attivita_snapshot = attivita_ref.get()
+
+#     # Lista per salvare tutte le attività
+#     attivita_list = []
+    
+#     if attivita_snapshot:
+#         for attivita_id, attivita_data in attivita_snapshot.items():
+#             attivita_data['id'] = attivita_id  # Associa l'ID dell'attività ai dati
+#             attivita_list.append(attivita_data)  # Aggiungi l'attività alla lista
+
+#     # Rendi disponibile la lista di attività nella pagina HTML
+#     return render_template('modifica_attivita.html', email=email, attivita_list=attivita_list)
+
+from datetime import datetime
+
+@app.route('/edit_attivita/<email>/<attivita_id>', methods=['GET', 'POST'])
+def edit_attivita(email, attivita_id):
+    if not session.get('logged_in'):
+        flash('Devi essere autenticato per accedere a questa pagina.')
+        return redirect(url_for('login'))
+
+    # Recupera l'attività specifica
+    operaio_email = email + '-mail_com'
+    attivita_ref = db.reference(f'Attivita/Utenti/{operaio_email}/{attivita_id}')
+    attivita = attivita_ref.get()
+
+    # Recupera la lista dei cantieri
+    cantiere_ref = db.reference('Cantiere')
+    cantieri_snapshot = cantiere_ref.get()
+    cantieri = ['Seleziona Cantiere']
+    if cantieri_snapshot:
+        cantieri.extend(cantieri_snapshot.keys())
+
+    # Converti la data nel formato YYYY-MM-DD solo se la data esiste
+    if attivita.get('data'):
+        try:
+            attivita['data'] = datetime.strptime(attivita['data'], '%d/%m/%Y').strftime('%Y-%m-%d')
+        except ValueError:
+            flash("Errore nel formato della data salvata. Assicurati che sia DD/MM/YYYY.")
+
+    if request.method == 'POST':
+        # Aggiorna i dati dell'attività
+        try:
+            parsed_data = datetime.strptime(request.form['data'], '%Y-%m-%d')
+            data = f"{parsed_data.day}/{parsed_data.month}/{parsed_data.year}"
+        except ValueError:
+            flash("Formato data non valido. Inserisci una data corretta.", 'danger')
+            return redirect(url_for('edit_attivita', email=email, attivita_id=attivita_id))
+
+        nuova_attivita = {
+            'data': data,
+            'cantiere': request.form['cantiere'],
+            'ore': request.form['ore'],
+            'lavorazione': request.form['lavorazione'],
+            'pioggia_vento': request.form.get('pioggia_vento', ''),
+            'ferie_permesso': request.form.get('ferie_permesso', ''),
+        }
+        attivita_ref.update(nuova_attivita)
+        flash('Attività aggiornata con successo!')
+        return redirect(url_for('modifica_attivita', email=email))
+
+    return render_template('edit_attivita.html', email=email, attivita=attivita, cantieri=cantieri)
+
+
+@app.route('/delete_attivita/<email>/<attivita_id>', methods=['POST'])
+def delete_attivita(email, attivita_id):
+    if not session.get('logged_in'):
+        flash('Devi essere autenticato per accedere a questa pagina.')
+        return redirect(url_for('login'))
+
+    # Recupera il riferimento all'attività da eliminare
+    operaio_email = email + '-mail_com'
+    attivita_ref = db.reference(f'Attivita/Utenti/{operaio_email}/{attivita_id}')
+    
+    # Elimina l'attività
+    attivita_ref.delete()
+    flash('Attività eliminata con successo!')
+    return redirect(url_for('modifica_attivita', email=email))
+
 
 
 if __name__ == '__main__':

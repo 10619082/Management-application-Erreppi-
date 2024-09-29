@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>Modifica Attività per {{ email }}</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        .btn-action {
+            width: 100px; /* Imposta una larghezza fissa per entrambi i bottoni */
+        }
+    </style>
+</head>
+<body>
+<div class="container mt-5">
+    <!-- Wrapper per il titolo e il tasto "Indietro" allineati orizzontalmente -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Modifica Attività per {{ email }}</h1>
+        <a href="{{ url_for('gestione_attivita') }}" class="btn btn-warning">Indietro</a>
+    </div>
+
+    {% if attivita_list %}
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Cantiere</th>
+                    <th>Ore</th>
+                    <th>Lavorazione</th>
+                    <th>Pioggia/Vento</th>
+                    <th>Ferie/Permesso</th>
+                    <th>Azione</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for attivita in attivita_list %}
+                <tr>
+                    <td>{{ attivita['data'] }}</td>
+                    <td>{{ attivita.get('cantiere', '') }}</td>
+                    <td>{{ attivita['ore'] }}</td>
+                    <td>{{ attivita.get('lavorazione', '') }}</td>
+                    <td>{{ attivita.get('pioggia_vento', '') }}</td>
+                    <td>{{ attivita.get('ferie_permesso', '') }}</td>
+                    <td>
+                        <a href="{{ url_for('edit_attivita', email=email, attivita_id=attivita['id']) }}" class="btn btn-primary btn-sm btn-action">Modifica</a>
+                        <form action="{{ url_for('delete_attivita', email=email, attivita_id=attivita['id']) }}" method="POST" style="display:inline;">
+                            <button type="submit" class="btn btn-danger btn-sm btn-action" onclick="return confirm('Sei sicuro di voler eliminare questa attività?');">Elimina</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>Nessuna attività trovata per questo operaio.</p>
+    {% endif %}
+    
+</div>
+</body>
+</html>

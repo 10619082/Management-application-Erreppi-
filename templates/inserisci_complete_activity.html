@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>Inserisci Attività Completa</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+<div class="container mt-5">
+    <h1>Inserisci Attività per {{ email }}</h1>
+
+    <!-- Messaggi di errore -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <form method="POST">
+        <div class="form-group">
+            <label for="data">Data</label>
+            <input type="date" class="form-control" id="data" name="data" required>
+        </div>
+        <div class="form-group">
+            <label for="cantiere">Cantiere</label>
+            <select class="form-control" id="cantiere" name="cantiere" required>
+                {% for cantiere in cantieri %}
+                    <option value="{{ cantiere }}">{{ cantiere }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="ore">Ore Lavorate</label>
+            <input type="number" step="0.5" class="form-control" id="ore" name="ore" required>
+        </div>
+        <div class="form-group">
+            <label for="lavorazione">Descrizione Lavorazione</label>
+            <textarea class="form-control" id="lavorazione" name="lavorazione" required></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Salva Attività</button>
+        <a href="{{ url_for('nuova_attivita_operaio', email=email) }}" class="btn btn-warning">Indietro</a>
+    </form>
+</div>
+</body>
+</html>
