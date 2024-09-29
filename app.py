@@ -24,7 +24,6 @@ app.secret_key = os.getenv('SECRET_KEY')
 firebase_key_json = os.getenv('FIREBASE_KEY_JSON')  
 
 
-
 # Debug per verificare che il valore sia caricato correttamente
 app.debug = False
 
@@ -234,7 +233,6 @@ def gestione_operai():
     return render_template('gestione_operai.html', operai=operai)
 
 
-
 @app.route('/gestione_excel', methods=['GET', 'POST'])
 def gestione_excel():
 
@@ -317,28 +315,46 @@ def is_date_in_range(date_str, data_inizio, data_fine):
         return False
 
 
-
 def generate_excel_contabilita(attivita_list, inizio, fine):
     file_name = f"contabilita_{inizio}_to_{fine}.xlsx"
     file_path = os.path.join(TEMP_DIR, file_name)
 
     workbook = xlsxwriter.Workbook(file_path)
     worksheet = workbook.add_worksheet("Contabilità")
+    
+    # Definire le formattazioni
+    date_format = workbook.add_format({'num_format': 'dd/mm/yyyy', 'border': 1, 'text_wrap': True})
+    number_format = workbook.add_format({'num_format': '#,##0.00', 'border': 1, 'text_wrap': True})
+    text_format = workbook.add_format({'border': 1, 'text_wrap': True})
+    header_format = workbook.add_format({'bold': True, 'border': 1, 'text_wrap': True})
 
+    # Impostare la larghezza delle colonne
+    worksheet.set_column('A:A', 11)  # Colonna Data
+    worksheet.set_column('B:B', 20)  # Colonna Cantiere
+    worksheet.set_column('C:C', 20)  # Colonna Operaio
+    worksheet.set_column('D:D', 10)  # Colonna Ore
+    worksheet.set_column('E:E', 40)  # Colonna Lavorazione
+
+    # Intestazioni
     headers = ['Data', 'Cantiere', 'Operaio', 'Ore', 'Lavorazione']
     for col, header in enumerate(headers):
-        worksheet.write(0, col, header)
+        worksheet.write(0, col, header, header_format)
 
+    # Scrivi i dati
     for row, attivita in enumerate(attivita_list, start=1):
-        worksheet.write(row, 0, attivita['data'])
-        worksheet.write(row, 1, attivita['cantiere'])
-        worksheet.write(row, 2, attivita['operaio'])
-        worksheet.write(row, 3, attivita['ore'])
-        worksheet.write(row, 4, attivita['lavorazione'])
+        data = datetime.strptime(attivita['data'], '%d/%m/%Y')  # Convertire la data per Excel
+        worksheet.write_datetime(row, 0, data, date_format)
+        worksheet.write(row, 1, attivita['cantiere'], text_format)
+        worksheet.write(row, 2, attivita['operaio'].split('@')[0], text_format)  # Mostra solo parte prima di '@'
+        
+        # Controlla se il campo 'ore' è vuoto e gestisci il caso
+        ore_value = attivita['ore'] if attivita['ore'] else '0.0'
+        worksheet.write_number(row, 3, float(ore_value), number_format)  # Formattare come numero con decimali
+        
+        worksheet.write(row, 4, attivita['lavorazione'], text_format)
 
     workbook.close()
     return file_name
-
 
 def generate_excel_completo(attivita_list, inizio, fine):
     file_name = f"completo_{inizio}_to_{fine}.xlsx"
@@ -347,18 +363,38 @@ def generate_excel_completo(attivita_list, inizio, fine):
     workbook = xlsxwriter.Workbook(file_path)
     worksheet = workbook.add_worksheet("Completo")
 
+    # Definire le formattazioni
+    date_format = workbook.add_format({'num_format': 'dd/mm/yyyy', 'border': 1, 'text_wrap': True})
+    number_format = workbook.add_format({'num_format': '#,##0.00', 'border': 1, 'text_wrap': True})
+    text_format = workbook.add_format({'border': 1, 'text_wrap': True})
+    header_format = workbook.add_format({'bold': True, 'border': 1, 'text_wrap': True})
+
+    # Impostare la larghezza delle colonne
+    worksheet.set_column('A:A', 11)  # Colonna Data
+    worksheet.set_column('B:B', 20)  # Colonna Cantiere
+    worksheet.set_column('C:C', 20)  # Colonna Operaio
+    worksheet.set_column('D:D', 10)  # Colonna Ore
+    worksheet.set_column('E:E', 40)  # Colonna Lavorazione
+    worksheet.set_column('F:F', 15)  # Colonna Pioggia/Vento
+    worksheet.set_column('G:G', 15)  # Colonna Ferie/Permesso
+
     headers = ['Data', 'Cantiere', 'Operaio', 'Ore', 'Lavorazione', 'Pioggia_Vento', 'Ferie_Permesso']
     for col, header in enumerate(headers):
-        worksheet.write(0, col, header)
+        worksheet.write(0, col, header, header_format)
 
     for row, attivita in enumerate(attivita_list, start=1):
-        worksheet.write(row, 0, attivita['data'])
-        worksheet.write(row, 1, attivita['cantiere'])
-        worksheet.write(row, 2, attivita['operaio'])
-        worksheet.write(row, 3, attivita['ore'])
-        worksheet.write(row, 4, attivita['lavorazione'])
-        worksheet.write(row, 5, attivita['pioggia_vento'])
-        worksheet.write(row, 6, attivita['ferie_permesso'])
+        data = datetime.strptime(attivita['data'], '%d/%m/%Y')  # Convertire la data per Excel
+        worksheet.write_datetime(row, 0, data, date_format)
+        worksheet.write(row, 1, attivita['cantiere'], text_format)
+        worksheet.write(row, 2, attivita['operaio'].split('@')[0], text_format)
+        
+        # Controlla se il campo 'ore' è vuoto e gestisci il caso
+        ore_value = attivita['ore'] if attivita['ore'] else '0.0'
+        worksheet.write_number(row, 3, float(ore_value), number_format)  # Formattare come numero con decimali
+        
+        worksheet.write(row, 4, attivita['lavorazione'], text_format)
+        worksheet.write(row, 5, attivita.get('pioggia_vento', ''), text_format)
+        worksheet.write(row, 6, attivita.get('ferie_permesso', ''), text_format)
 
     workbook.close()
     return file_name
@@ -371,20 +407,41 @@ def generate_excel_buste(attivita_list, inizio, fine):
     workbook = xlsxwriter.Workbook(file_path)
     worksheet = workbook.add_worksheet("Buste Paga")
 
+    # Definire le formattazioni
+    date_format = workbook.add_format({'num_format': 'dd/mm/yyyy', 'border': 1, 'text_wrap': True})
+    number_format = workbook.add_format({'num_format': '#,##0.00', 'border': 1, 'text_wrap': True})
+    text_format = workbook.add_format({'border': 1, 'text_wrap': True})
+    header_format = workbook.add_format({'bold': True, 'border': 1, 'text_wrap': True})
+
+    # Impostare la larghezza delle colonne
+    worksheet.set_column('A:A', 11)  # Colonna Data
+    worksheet.set_column('B:B', 20)  # Colonna Cantiere
+    worksheet.set_column('C:C', 20)  # Colonna Operaio
+    worksheet.set_column('D:D', 10)  # Colonna Ore
+    worksheet.set_column('E:E', 15)  # Colonna Pioggia/Vento
+    worksheet.set_column('F:F', 15)  # Colonna Ferie/Permesso
+
     headers = ['Data', 'Cantiere', 'Operaio', 'Ore', 'Pioggia_Vento', 'Ferie_Permesso']
     for col, header in enumerate(headers):
-        worksheet.write(0, col, header)
+        worksheet.write(0, col, header, header_format)
 
     for row, attivita in enumerate(attivita_list, start=1):
-        worksheet.write(row, 0, attivita['data'])
-        worksheet.write(row, 1, attivita['cantiere'])
-        worksheet.write(row, 2, attivita['operaio'])
-        worksheet.write(row, 3, attivita['ore'])
-        worksheet.write(row, 4, attivita['pioggia_vento'])
-        worksheet.write(row, 5, attivita['ferie_permesso'])
+        data = datetime.strptime(attivita['data'], '%d/%m/%Y')  # Convertire la data per Excel
+        worksheet.write_datetime(row, 0, data, date_format)
+        worksheet.write(row, 1, attivita['cantiere'], text_format)
+        worksheet.write(row, 2, attivita['operaio'].split('@')[0], text_format)
+        
+        # Controlla se il campo 'ore' è vuoto e gestisci il caso
+        ore_value = attivita['ore'] if attivita['ore'] else '0.0'
+        worksheet.write_number(row, 3, float(ore_value), number_format)  # Formattare come numero con decimali
+        
+        worksheet.write(row, 4, attivita.get('pioggia_vento', ''), text_format)
+        worksheet.write(row, 5, attivita.get('ferie_permesso', ''), text_format)
 
     workbook.close()
     return file_name
+
+
 
 
 @app.route('/gestione_foto_bolle', methods=['GET', 'POST'])
