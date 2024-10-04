@@ -1,5 +1,5 @@
 # Flask Web App - Management of Workers
-This is a web app developed with Flask for managing workers, projects (cantieri), and photo bolle. It includes Firebase-based authentication, worker task management, photo bolle management, and Excel report generation. The app uses Firebase Realtime Database and Firebase Storage to handle and store data related to workers, projects, and work activities.
+This is a web app developed with Flask for managing workers, projects (cantieri), and photo of receipts for the purchase of construction materials. It includes Firebase-based authentication, worker task management, photo management, and Excel report generation. The app uses Firebase Realtime Database and Firebase Storage to handle and store data related to workers, projects, and work activities.
 
 ## Key Features
 
