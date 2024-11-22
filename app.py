@@ -421,8 +421,9 @@ def generate_excel_buste(attivita_list, inizio, fine):
     worksheet.set_column('D:D', 10)  # Colonna Ore
     worksheet.set_column('E:E', 15)  # Colonna Pioggia/Vento
     worksheet.set_column('F:F', 15)  # Colonna Ferie/Permesso
+    worksheet.set_column('G:G', 15)  # Colonna Descrizione
 
-    headers = ['Data', 'Cantiere', 'Operaio', 'Ore', 'Pioggia_Vento', 'Ferie_Permesso']
+    headers = ['Data', 'Cantiere', 'Operaio', 'Ore', 'Pioggia_Vento', 'Ferie_Permesso','Descrizione']
     for col, header in enumerate(headers):
         worksheet.write(0, col, header, header_format)
 
@@ -438,6 +439,8 @@ def generate_excel_buste(attivita_list, inizio, fine):
         
         worksheet.write(row, 4, attivita.get('pioggia_vento', ''), text_format)
         worksheet.write(row, 5, attivita.get('ferie_permesso', ''), text_format)
+        worksheet.write(row, 6, attivita['lavorazione'], text_format)
+
 
     workbook.close()
     return file_name
