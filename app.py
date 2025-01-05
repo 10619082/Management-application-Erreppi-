@@ -699,7 +699,7 @@ def inserisci_complete_activity(email):
                 'id': nuovo_id,
                 'data': data,
                 'cantiere': cantiere_selezionato,
-                'operaio': email,
+                'operaio': operaio_email,
                 'ore': ore,
                 'lavorazione': lavorazione,
             }
