@@ -46,8 +46,8 @@ if not firebase_admin._apps:
 bucket = storage.bucket()
 db_ref = db.reference("/Attivita/Utenti")
 
-# Directory temporanea per i file
-TEMP_DIR = os.path.join(os.getcwd(), "temp")
+# Directory temporanea per i file — /tmp è sempre scrivibile su Render e Linux
+TEMP_DIR = os.path.join('/tmp', 'erreppi_temp')
 os.makedirs(TEMP_DIR, exist_ok=True)
 
 def clean_temp_directory():
@@ -349,8 +349,11 @@ def generate_excel_contabilita(attivita_list, inizio, fine):
         worksheet.write(row, 2, attivita['operaio'].split('@')[0], text_format)  # Mostra solo parte prima di '@'
         
         # Controlla se il campo 'ore' è vuoto e gestisci il caso
-        ore_value = attivita['ore'] if attivita['ore'] else '0.0'
-        worksheet.write_number(row, 3, float(ore_value), number_format)  # Formattare come numero con decimali
+        try:
+            ore_value = float(attivita['ore'])
+        except (ValueError, TypeError):
+            ore_value = 0.0
+        worksheet.write_number(row, 3, ore_value, number_format)  # Formattare come numero con decimali
         
         worksheet.write(row, 4, attivita['lavorazione'], text_format)
 
@@ -390,8 +393,11 @@ def generate_excel_completo(attivita_list, inizio, fine):
         worksheet.write(row, 2, attivita['operaio'].split('@')[0], text_format)
         
         # Controlla se il campo 'ore' è vuoto e gestisci il caso
-        ore_value = attivita['ore'] if attivita['ore'] else '0.0'
-        worksheet.write_number(row, 3, float(ore_value), number_format)  # Formattare come numero con decimali
+        try:
+            ore_value = float(attivita['ore'])
+        except (ValueError, TypeError):
+            ore_value = 0.0
+        worksheet.write_number(row, 3, ore_value, number_format)  # Formattare come numero con decimali
         
         worksheet.write(row, 4, attivita['lavorazione'], text_format)
         worksheet.write(row, 5, attivita.get('pioggia_vento', ''), text_format)
@@ -434,8 +440,11 @@ def generate_excel_buste(attivita_list, inizio, fine):
         worksheet.write(row, 2, attivita['operaio'].split('@')[0], text_format)
         
         # Controlla se il campo 'ore' è vuoto e gestisci il caso
-        ore_value = attivita['ore'] if attivita['ore'] else '0.0'
-        worksheet.write_number(row, 3, float(ore_value), number_format)  # Formattare come numero con decimali
+        try:
+            ore_value = float(attivita['ore'])
+        except (ValueError, TypeError):
+            ore_value = 0.0
+        worksheet.write_number(row, 3, ore_value, number_format)  # Formattare come numero con decimali
         
         worksheet.write(row, 4, attivita.get('pioggia_vento', ''), text_format)
         worksheet.write(row, 5, attivita.get('ferie_permesso', ''), text_format)
