@@ -1,155 +1,268 @@
-<!DOCTYPE html>
-<html lang="it">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestione Foto Bolle</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-    <script src="https://unpkg.com/@panzoom/panzoom@4.4.4/dist/panzoom.min.js"></script> <!-- Libreria Panzoom -->
-</head>
-<body>
-    <div class="container mt-5">
-        <!-- Sezione titolo e pulsante "Indietro" allineati orizzontalmente -->
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h1>Gestione Foto Bolle</h1>
-            <a href="/" class="btn btn-warning">Indietro</a>
-        </div>
+{% extends "base.html" %}
+{% set active = 'foto' %}
+{% block title %}Foto Bolle{% endblock %}
 
-        <form id="foto_bolle_form" method="POST">
-            <div class="form-group">
-                <label for="start_year">Anno di inizio</label>
-                <select name="start_year" class="form-control">
-                    {% for year in years %}
-                    <option value="{{ year }}">{{ year }}</option>
-                    {% endfor %}
-                </select>
-            </div>
+{% block head %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://unpkg.com/@panzoom/panzoom@4.4.4/dist/panzoom.min.js"></script>
+<style>
+.photo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+}
+.photo-thumb {
+    aspect-ratio: 1;
+    object-fit: cover;
+    border-radius: var(--radius-sm);
+    border: 2px solid var(--border-light);
+    cursor: pointer;
+    transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+    width: 100%;
+}
+.photo-thumb:hover {
+    border-color: var(--accent);
+    transform: scale(1.03);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
 
-            <div class="form-group">
-                <label for="start_month">Mese di inizio</label>
-                <select name="start_month" class="form-control">
-                    {% for month in months %}
-                    <option value="{{ month }}">{{ month }}</option>
-                    {% endfor %}
-                </select>
-            </div>
+/* Modal */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 1000;
+    place-items: center;
+}
+.modal-overlay.open { display: grid; }
+.modal-box {
+    background: var(--card-bg);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    max-width: 90vw;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border-light);
+}
+.modal-title { font-size: 14px; font-weight: 600; }
+.modal-close {
+    background: none; border: none; cursor: pointer;
+    color: var(--text-secondary); padding: 4px;
+    border-radius: 6px; transition: background 0.1s;
+    display: grid; place-items: center;
+}
+.modal-close:hover { background: var(--page-bg); color: var(--text-primary); }
+.modal-body {
+    overflow: hidden;
+    flex: 1;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    min-height: 300px;
+    min-width: 400px;
+}
+.modal-body img {
+    max-width: 100%;
+    max-height: 70vh;
+    object-fit: contain;
+    border-radius: 6px;
+}
 
-            <div class="form-group">
-                <label for="end_year">Anno di fine (opzionale)</label>
-                <select name="end_year" class="form-control">
-                    <option value="">---</option>
-                    {% for year in years %}
-                    <option value="{{ year }}">{{ year }}</option>
-                    {% endfor %}
-                </select>
-            </div>
+/* Spinner */
+.spinner {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 20px;
+    background: var(--info-bg);
+    border: 1px solid #bfdbfe;
+    border-radius: var(--radius-sm);
+    font-size: 13.5px;
+    color: #1e40af;
+    margin-top: 16px;
+}
+.spinner.show { display: flex; }
+.spin-ring {
+    width: 18px; height: 18px;
+    border: 2.5px solid #bfdbfe;
+    border-top-color: var(--info);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+{% endblock %}
 
-            <div class="form-group">
-                <label for="end_month">Mese di fine (opzionale)</label>
-                <select name="end_month" class="form-control">
-                    <option value="">---</option>
-                    {% for month in months %}
-                    <option value="{{ month }}">{{ month }}</option>
-                    {% endfor %}
-                </select>
-            </div>
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Foto Bolle (DDT)</h1>
+        <p class="page-subtitle">Visualizza e scarica le foto dei documenti di trasporto</p>
+    </div>
+    <a href="{{ url_for('index') }}" class="btn-back">
+        <i data-lucide="arrow-left"></i> Indietro
+    </a>
+</div>
 
-            <button type="submit" name="action" value="Visualizza Foto" class="btn btn-primary">Visualizza Foto</button>
-            <button type="button" id="scarica_button" class="btn btn-secondary">Scarica Foto</button>
-        </form>
-
-        <!-- Spinner e messaggio di caricamento -->
-        <div id="loading_spinner" style="display:none; margin-top: 20px;">
-            <div class="spinner-border text-primary" role="status">
-                <span class="sr-only">Caricamento...</span>
-            </div>
-            <span id="loading_message" style="margin-left: 10px;">Attendere processamento foto...</span>
-        </div>
-
-        <!-- Sezione Risultati -->
-        <div class="mt-5">
-            <h2>Risultati {% if period %}: {{ period }} {% endif %}</h2>
-            <div class="d-flex flex-wrap">
-                {% if photo_urls %}
-                {% for url in photo_urls %}
-                <img src="{{ url }}" alt="Photo" class="img-thumbnail" style="width:150px; height:150px; cursor: pointer;" data-toggle="modal" data-target="#imageModal" data-img-src="{{ url }}">
-                {% endfor %}
-                {% else %}
-                <p>Nessuna foto trovata per il periodo selezionato.</p>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Modal di Bootstrap per mostrare l'immagine ingrandita -->
-        <div class="modal fade" id="imageModal" tabindex="-1" role="dialog" aria-labelledby="imageModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered" role="document">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="imageModalLabel">Visualizzazione Foto</h5>
-                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
-                        </button>
+<div class="grid-2" style="align-items:start; margin-bottom:24px;">
+    <div class="card">
+        <div class="card-header"><span class="card-title">Periodo</span></div>
+        <div class="card-body">
+            <form id="foto_bolle_form" method="POST">
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>Anno inizio</label>
+                        <select name="start_year" class="form-control">
+                            {% for year in years %}
+                            <option value="{{ year }}">{{ year }}</option>
+                            {% endfor %}
+                        </select>
                     </div>
-                    <div class="modal-body text-center">
-                        <div id="zoomable-container">
-                            <!-- Inserisci qui il messaggio per indicare lo zoom -->
-                            <p class="text-muted">Usa il mouse per zoommare</p>
-                            <img id="modalImage" src="" alt="Photo" class="img-fluid">
-                        </div>
+                    <div class="form-group">
+                        <label>Mese inizio</label>
+                        <select name="start_month" class="form-control">
+                            {% for month in months %}
+                            <option value="{{ month }}">{{ month }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Anno fine <span style="color:var(--text-muted);font-weight:400;">(opz.)</span></label>
+                        <select name="end_year" class="form-control">
+                            <option value="">—</option>
+                            {% for year in years %}
+                            <option value="{{ year }}">{{ year }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label>Mese fine <span style="color:var(--text-muted);font-weight:400;">(opz.)</span></label>
+                        <select name="end_month" class="form-control">
+                            <option value="">—</option>
+                            {% for month in months %}
+                            <option value="{{ month }}">{{ month }}</option>
+                            {% endfor %}
+                        </select>
                     </div>
                 </div>
-            </div>
+            </form>
         </div>
     </div>
 
-    <script>
-        // Funzione per cambiare l'immagine della modale quando un'immagine viene cliccata
-        $('#imageModal').on('show.bs.modal', function (event) {
-            var button = $(event.relatedTarget);  // Bottone che ha attivato la modale (immagine)
-            var imgSrc = button.data('img-src');  // Prendi l'URL dell'immagine
-            var modal = $(this);
-            modal.find('#modalImage').attr('src', imgSrc);  // Imposta l'immagine nella modale
+    <div class="card">
+        <div class="card-header"><span class="card-title">Azioni</span></div>
+        <div class="card-body" style="display:flex;flex-direction:column;gap:10px;">
+            <button type="submit" form="foto_bolle_form" name="action" value="Visualizza Foto" class="btn btn-primary" style="width:100%;justify-content:center;">
+                <i data-lucide="eye"></i> Visualizza Foto
+            </button>
+            <button type="button" id="scarica_button" class="btn btn-ghost" style="width:100%;justify-content:center;">
+                <i data-lucide="download"></i> Scarica ZIP
+            </button>
+        </div>
+        <div class="spinner" id="loading_spinner">
+            <div class="spin-ring"></div>
+            <span id="loading_message">Elaborazione in corso...</span>
+        </div>
+    </div>
+</div>
 
-            // Inizializza Panzoom sull'immagine della modale
-            const elem = document.getElementById('zoomable-container');
-            const panzoom = Panzoom(elem, {
-                maxScale: 5,  // Imposta lo zoom massimo
-                minScale: 1,  // Imposta lo zoom minimo
-                contain: 'outside'  // Permette lo spostamento anche fuori dai confini
-            });
-            
-            // Abilita lo zoom con la rotella del mouse
-            elem.addEventListener('wheel', panzoom.zoomWithWheel);
+<!-- Risultati -->
+<div class="card">
+    <div class="card-header">
+        <span class="card-title">
+            Risultati
+            {% if period %}<span style="color:var(--text-secondary);font-weight:400;"> — {{ period }}</span>{% endif %}
+        </span>
+        {% if photo_urls %}
+            <span class="badge badge-amber">{{ photo_urls | length }} foto</span>
+        {% endif %}
+    </div>
+    <div class="card-body">
+        {% if photo_urls %}
+            <div class="photo-grid">
+                {% for url in photo_urls %}
+                <img src="{{ url }}" alt="DDT" class="photo-thumb" data-src="{{ url }}">
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <i data-lucide="image"></i>
+                <p>Nessuna foto trovata per il periodo selezionato.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Lightbox Modal -->
+<div class="modal-overlay" id="imageModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <span class="modal-title">Visualizzazione Foto</span>
+            <button class="modal-close" id="closeModal">
+                <i data-lucide="x" style="width:18px;height:18px;"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div id="zoomable-container">
+                <img id="modalImage" src="" alt="DDT">
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Lightbox
+document.querySelectorAll('.photo-thumb').forEach(img => {
+    img.addEventListener('click', () => {
+        document.getElementById('modalImage').src = img.dataset.src;
+        document.getElementById('imageModal').classList.add('open');
+        const elem = document.getElementById('zoomable-container');
+        const pz = Panzoom(elem, { maxScale: 5, minScale: 1 });
+        elem.addEventListener('wheel', pz.zoomWithWheel);
+    });
+});
+
+document.getElementById('closeModal').addEventListener('click', () => {
+    document.getElementById('imageModal').classList.remove('open');
+    document.getElementById('modalImage').src = '';
+});
+
+document.getElementById('imageModal').addEventListener('click', function(e) {
+    if (e.target === this) this.classList.remove('open');
+});
+
+// Download ZIP
+$(document).ready(function() {
+    $("#scarica_button").click(function() {
+        $("#loading_spinner").addClass("show");
+        $.ajax({
+            type: "POST",
+            url: "/gestione_foto_bolle",
+            data: $("#foto_bolle_form").serialize() + '&action=Scarica Foto',
+            success: function(response) {
+                $("#loading_spinner").removeClass("show");
+                if (response.zip_url) {
+                    window.location.href = response.zip_url;
+                } else if (response.error) {
+                    alert(response.error);
+                }
+            },
+            error: function() {
+                $("#loading_spinner").removeClass("show");
+                alert("Errore durante il download.");
+            }
         });
-
-        $(document).ready(function() {
-            $("#scarica_button").click(function() {
-                // Mostra lo spinner e il messaggio di caricamento
-                $("#loading_spinner").show();
-                $("#loading_message").text("Attendere processamento foto...");
-
-                // Esegui l'invio del form con AJAX
-                $.ajax({
-                    type: "POST",
-                    url: "/gestione_foto_bolle",
-                    data: $("#foto_bolle_form").serialize() + '&action=Scarica Foto',
-                    success: function(response) {
-                        $("#loading_spinner").hide();
-                        if (response.zip_url) {
-                            window.location.href = response.zip_url;
-                        } else if (response.error) {
-                            alert(response.error);
-                        }
-                    },
-                    error: function() {
-                        $("#loading_spinner").hide();
-                        alert("Errore durante il download.");
-                    }
-                });
-            });
-        });
-    </script>
-</body>
-</html>
+    });
+});
+</script>
+{% endblock %}

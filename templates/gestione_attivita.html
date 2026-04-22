@@ -1,40 +1,63 @@
-<!DOCTYPE html>
-<html lang="it">
-<head>
-    <meta charset="UTF-8">
-    <title>Gestione Attività Operai</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-</head>
-<body>
-<div class="container mt-5">
-    <!-- Wrapper per il titolo e il tasto "Indietro" allineati orizzontalmente -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1>Gestione Attività Operai</h1>
-        <a href="{{ url_for('index') }}" class="btn btn-warning">Indietro</a>
-    </div>
+{% extends "base.html" %}
+{% set active = 'attivita' %}
+{% block title %}Gestione Attività{% endblock %}
 
-    <!-- Lista degli operai -->
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Nome</th>
-                <th>Cognome</th>
-                <th class="text-right">Azione</th> <!-- Allineamento a destra -->
-            </tr>
-        </thead>
-        <tbody>
-            {% for email, operaio in operai.items() %}
-            <tr>
-                <td>{{ operaio['nome'] }}</td>
-                <td>{{ operaio['cognome'] }}</td>
-                <td class="text-right"> <!-- Allineamento a destra -->
-                    <a href="{{ url_for('modifica_attivita', email=operaio['email']) }}" class="btn btn-primary">Modifica Attività</a>
-                    <a href="{{ url_for('nuova_attivita_operaio', email=operaio['email']) }}" class="btn btn-success">Aggiungi Nuova Attività</a>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Attività Operai</h1>
+        <p class="page-subtitle">Seleziona un operaio per gestire le sue giornate</p>
+    </div>
+    <a href="{{ url_for('index') }}" class="btn-back">
+        <i data-lucide="arrow-left"></i> Indietro
+    </a>
 </div>
-</body>
-</html>
+
+<div class="card">
+    <div class="card-body" style="padding:0;">
+        {% if operai %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Operaio</th>
+                    <th>Email</th>
+                    <th style="text-align:right;">Azioni</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for email, operaio in operai.items() %}
+                <tr>
+                    <td>
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <div style="width:34px;height:34px;border-radius:50%;background:var(--accent-light);display:grid;place-items:center;font-weight:700;font-size:13px;color:var(--accent-dark);flex-shrink:0;">
+                                {{ operaio['nome'][0] }}{{ operaio['cognome'][0] }}
+                            </div>
+                            <div>
+                                <div style="font-weight:600;">{{ operaio['nome'] }} {{ operaio['cognome'] }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td style="color:var(--text-secondary); font-size:13px;">{{ operaio['email'] }}</td>
+                    <td style="text-align:right;">
+                        <div style="display:flex;gap:8px;justify-content:flex-end;">
+                            <a href="{{ url_for('modifica_attivita', email=operaio['email']) }}" class="btn btn-ghost btn-sm">
+                                <i data-lucide="pencil"></i> Modifica
+                            </a>
+                            <a href="{{ url_for('nuova_attivita_operaio', email=operaio['email']) }}" class="btn btn-primary btn-sm">
+                                <i data-lucide="plus"></i> Nuova Attività
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <i data-lucide="users"></i>
+            <p>Nessun operaio trovato.<br>Aggiungine uno nella sezione Operai.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

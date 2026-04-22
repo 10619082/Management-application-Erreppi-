@@ -1,169 +1,260 @@
-<!DOCTYPE html>
-<html lang="it">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Performance Operai</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-    <style>
-        .calendar {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);  /* Imposta 7 colonne per i giorni della settimana */
-            gap: 5px;  /* Riduce lo spazio tra i giorni */
-            margin-bottom: 20px;
-        }
-        .day {
-            padding: 8px;  /* Riduce il padding interno */
-            text-align: center;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 14px;  /* Riduce la dimensione del testo */
-        }
-        .day.green {
-            background-color: #28a745;
-            color: white;
-        }
-        .day.red {
-            background-color: #dc3545;
-            color: white;
-        }
-        .day.empty {
-            visibility: hidden;  /* Nascondi i giorni vuoti che non fanno parte del mese corrente */
-        }
-        .weekday {
-            font-weight: bold;
-            background-color: #f1f1f1;
-            padding: 8px;  /* Riduce il padding per i giorni della settimana */
-            text-align: center;
-            border: 1px solid #ddd;
-            font-size: 14px;  /* Riduce la dimensione del testo per i giorni della settimana */
-        }
-        .calendar-header {
-            text-align: center;
-            margin-bottom: 10px;
-            font-size: 18px;  /* Riduce la dimensione del titolo del calendario */
-        }
-        .form-inline {
-            display: flex;
-            justify-content: flex-start;  /* Allinea a sinistra */
-            align-items: center;
-            margin-bottom: 20px;
-        }
-        .calendar-container {
-            border: 2px solid #ddd;  /* Aggiunge un bordo intorno a ogni calendario */
-            padding: 15px;
-            margin-bottom: 20px;
-            border-radius: 10px;
-        }
-        .calendar-row {
-            display: flex;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-        .form-group label {
-            font-size: 16px;
-            margin-right: 10px;
-        }
-        .header-container {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-        }
-        h1 {
-            margin-bottom: 0;  /* Rimuovi il margine inferiore per allineare meglio il titolo */
-        }
-        #histogram {
-            width: 100%;
-            height: 500px;
-            margin-top: 40px;
-        }
-        .title-histogram {
-            text-align: center;
-            font-size: 24px;
-            margin-top: 40px;
-            margin-bottom: 20px;
-        }
-    </style>
-</head>
-<body>
-    <div class="container mt-5">
-        <!-- Header con titolo e pulsante Indietro -->
-        <div class="header-container">
-            <h1 class="text-center">Giornate registrate per operaio - {{ mese }}/{{ anno }}</h1>
-            <a href="{{ url_for('index') }}" class="btn btn-warning">Indietro</a>
-        </div>
+{% extends "base.html" %}
+{% set active = 'performance' %}
+{% block title %}Performance Operai{% endblock %}
 
-        <!-- Form per selezionare il mese e l'anno -->
-        <form method="POST" class="form-inline mb-4">
-            <div class="form-group mx-3">
-                <label for="mese">Mese:</label>
-                <select name="mese" id="mese" class="form-control ml-2">
-                    {% set mesi_nomi = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'] %}
-                    {% for i in range(1, 13) %}
-                    <option value="{{ i }}" {% if i == mese %}selected{% endif %}>{{ mesi_nomi[i-1] }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="form-group mx-3">
-                <label for="anno">Anno:</label>
-                <select name="anno" id="anno" class="form-control ml-2">
-                    {% for i in range(oggi.year - 5, oggi.year + 1) %}
-                    <option value="{{ i }}" {% if i == anno %}selected{% endif %}>{{ i }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <button type="submit" class="btn btn-primary mx-3">Aggiorna</button>
-        </form>
+{% block head %}
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<style>
+/* Filter bar */
+.filter-bar {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 28px;
+}
+.filter-bar .form-group { margin-bottom: 0; }
+.filter-bar label { font-size: 12px; color: var(--text-secondary); }
+.filter-bar .form-control { width: auto; min-width: 130px; }
 
-        <!-- Sezione con i calendari degli operai -->
-        <div class="calendar-row">
-            {% for email, operaio in operai.items() %}
-            <div class="col-md-4 calendar-container">
-                <h3 class="calendar-header">{{ operaio['nome'] }} {{ operaio['cognome'] }}</h3>
-                <div class="calendar">
-                    {# Giorni della settimana #}
-                    <div class="weekday">Lun</div>
-                    <div class="weekday">Mar</div>
-                    <div class="weekday">Mer</div>
-                    <div class="weekday">Gio</div>
-                    <div class="weekday">Ven</div>
-                    <div class="weekday">Sab</div>
-                    <div class="weekday">Dom</div>
+/* Calendar grid */
+.operai-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+}
+.operaio-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius);
+    overflow: hidden;
+}
+.operaio-header {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border-light);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.operaio-avatar {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--accent-light);
+    color: var(--accent-dark);
+    font-weight: 700;
+    font-size: 12px;
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+}
+.operaio-name { font-size: 13.5px; font-weight: 600; }
+.operaio-stat { font-size: 11.5px; color: var(--text-secondary); margin-top: 2px; }
 
-                    {# Calcolo del primo giorno della settimana per il mese corrente #}
-                    {% set primo_giorno_settimana = mese_primo_giorno.weekday() %}
+.cal-wrap { padding: 14px 18px 18px; }
+.cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 3px;
+}
+.cal-wday {
+    text-align: center;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-muted);
+    padding-bottom: 5px;
+    text-transform: uppercase;
+}
+.cal-day {
+    aspect-ratio: 1;
+    border-radius: 5px;
+    display: grid;
+    place-items: center;
+    font-size: 11px;
+    font-weight: 500;
+}
+.cal-day.empty { visibility: hidden; }
+.cal-day.worked {
+    background: var(--success);
+    color: #fff;
+    font-weight: 600;
+}
+.cal-day.missing {
+    background: var(--border-light);
+    color: var(--text-muted);
+}
 
-                    {# Crea celle vuote per i giorni che non fanno parte del mese corrente, prima del primo giorno #}
-                    {% for _ in range(primo_giorno_settimana) %}
-                        <div class="day empty"></div>
-                    {% endfor %}
+/* Legend */
+.legend {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+}
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+.legend-dot {
+    width: 12px; height: 12px;
+    border-radius: 3px;
+    flex-shrink: 0;
+}
 
-                    {# Ciclo sui giorni del mese corrente #}
-                    {% set attivita = attivita_per_operai.get(email, {}) %}
-                    {% for day in range(1, days_in_month + 1) %}
-                        {% if attivita.get(day) %}
-                            <div class="day green">{{ day }}</div>
-                        {% else %}
-                            <div class="day red">{{ day }}</div>
-                        {% endif %}
-                    {% endfor %}
-                </div>
-            </div>
-            {% endfor %}
-        </div>
+/* Chart card */
+.chart-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius);
+    overflow: hidden;
+}
+.chart-header {
+    padding: 18px 24px 14px;
+    border-bottom: 1px solid var(--border-light);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+</style>
+{% endblock %}
 
-        <!-- Titolo per l'istogramma -->
-        <h2 class="title-histogram" style="font-size: 36px; font-weight: bold;">Conteggio foto bolle caricate nell'anno: {{ anno }}</h2>
-
-        <!-- Istogramma sotto i calendari -->
-        <div id="histogram"></div>
-
-        <script>
-            var graphData = {{ graph_json|safe }};
-            Plotly.newPlot('histogram', graphData.data, graphData.layout);
-        </script>
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Performance Operai</h1>
+        <p class="page-subtitle">Presenze e statistiche — {{ mese }}/{{ anno }}</p>
     </div>
-</body>
-</html>
+    <a href="{{ url_for('index') }}" class="btn-back">
+        <i data-lucide="arrow-left"></i> Indietro
+    </a>
+</div>
+
+<!-- Filtro mese/anno -->
+<form method="POST" class="filter-bar">
+    <div class="form-group">
+        <label>Mese</label>
+        {% set mesi_nomi = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'] %}
+        <select name="mese" class="form-control">
+            {% for i in range(1, 13) %}
+            <option value="{{ i }}" {% if i == mese %}selected{% endif %}>{{ mesi_nomi[i-1] }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="form-group">
+        <label>Anno</label>
+        <select name="anno" class="form-control">
+            {% for i in range(oggi.year - 5, oggi.year + 1) %}
+            <option value="{{ i }}" {% if i == anno %}selected{% endif %}>{{ i }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <button type="submit" class="btn btn-primary">
+        <i data-lucide="refresh-cw"></i> Aggiorna
+    </button>
+</form>
+
+<!-- Legenda -->
+<div class="legend">
+    <div class="legend-item">
+        <div class="legend-dot" style="background:var(--success);"></div>
+        Giornata registrata
+    </div>
+    <div class="legend-item">
+        <div class="legend-dot" style="background:var(--border-light);"></div>
+        Assenza / non registrata
+    </div>
+</div>
+
+<!-- Calendari operai -->
+{% if operai %}
+<div class="operai-grid">
+    {% for email, operaio in operai.items() %}
+    {% set attivita = attivita_per_operai.get(email, {}) %}
+    {% set giorni_lavorati = attivita | length %}
+    <div class="operaio-card">
+        <div class="operaio-header">
+            <div class="operaio-avatar">{{ operaio['nome'][0] }}{{ operaio['cognome'][0] }}</div>
+            <div>
+                <div class="operaio-name">{{ operaio['nome'] }} {{ operaio['cognome'] }}</div>
+                <div class="operaio-stat">{{ giorni_lavorati }} giorni su {{ days_in_month }}</div>
+            </div>
+        </div>
+        <div class="cal-wrap">
+            <div class="cal-grid">
+                <div class="cal-wday">Lun</div>
+                <div class="cal-wday">Mar</div>
+                <div class="cal-wday">Mer</div>
+                <div class="cal-wday">Gio</div>
+                <div class="cal-wday">Ven</div>
+                <div class="cal-wday">Sab</div>
+                <div class="cal-wday">Dom</div>
+
+                {% set primo = mese_primo_giorno.weekday() %}
+                {% for _ in range(primo) %}
+                    <div class="cal-day empty"></div>
+                {% endfor %}
+
+                {% for day in range(1, days_in_month + 1) %}
+                    {% if attivita.get(day) %}
+                        <div class="cal-day worked" title="Giornata registrata">{{ day }}</div>
+                    {% else %}
+                        <div class="cal-day missing">{{ day }}</div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="card">
+    <div class="card-body">
+        <div class="empty-state">
+            <i data-lucide="users"></i>
+            <p>Nessun operaio trovato.</p>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Grafico foto bolle -->
+<div class="chart-card">
+    <div class="chart-header">
+        <div>
+            <div class="card-title">Foto Bolle caricate — {{ anno }}</div>
+            <div style="font-size:12px;color:var(--text-secondary);margin-top:3px;">Conteggio DDT per mese</div>
+        </div>
+        <span class="badge badge-amber">
+            <i data-lucide="image" style="width:11px;height:11px;margin-right:4px;"></i> DDT
+        </span>
+    </div>
+    <div id="histogram" style="width:100%; height:360px; padding:8px 0;"></div>
+</div>
+
+<script>
+var graphData = {{ graph_json|safe }};
+var layout = Object.assign({}, graphData.layout, {
+    paper_bgcolor: 'rgba(0,0,0,0)',
+    plot_bgcolor:  'rgba(0,0,0,0)',
+    margin: { t: 20, r: 24, b: 48, l: 48 },
+    font: { family: 'DM Sans, sans-serif', size: 12, color: '#6b7280' },
+    xaxis: Object.assign({}, graphData.layout.xaxis, {
+        gridcolor: '#f0ede8',
+        linecolor: '#e5e4df'
+    }),
+    yaxis: Object.assign({}, graphData.layout.yaxis, {
+        gridcolor: '#f0ede8',
+        linecolor: '#e5e4df'
+    })
+});
+var traces = graphData.data.map(function(t) {
+    return Object.assign({}, t, {
+        marker: { color: '#f59e0b', opacity: 0.85 }
+    });
+});
+Plotly.newPlot('histogram', traces, layout, { responsive: true, displayModeBar: false });
+</script>
+{% endblock %}

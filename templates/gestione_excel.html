@@ -1,79 +1,129 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestione Excel</title>
+{% extends "base.html" %}
+{% set active = 'excel' %}
+{% block title %}Esporta Excel{% endblock %}
 
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <style>
-        body {
-            background-color: #f8f9fa;
-            padding: 20px;
-        }
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;  
-            background-color: #ffffff;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-        h1 {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        label {
-            font-weight: bold;
-        }
-        .btn {
-            margin-top: 20px;
-            width: 100%;
-        }
-    </style>
-</head>
-<body>
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Esporta Excel</h1>
+        <p class="page-subtitle">Genera report per contabilità, buste paga o archivio completo</p>
+    </div>
+    <a href="{{ url_for('index') }}" class="btn-back">
+        <i data-lucide="arrow-left"></i> Indietro
+    </a>
+</div>
 
-    <div class="container">
-        <h1>Genera Foglio Excel</h1>
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
 
-        <!-- Modulo con il controllo lato client -->
-        <form id="excelForm" action="/gestione_excel" method="POST">
-            <div class="form-group">
-                <label for="start_date">Data Inizio:</label>
-                <input type="date" class="form-control" id="start_date" name="start_date" required>
-            </div>
+<div class="grid-2" style="align-items:start; max-width:860px;">
 
-            <div class="form-group">
-                <label for="end_date">Data Fine:</label>
-                <input type="date" class="form-control" id="end_date" name="end_date" required>
-            </div>
-
-            <div class="form-group">
-                <label>Seleziona il tipo di foglio Excel:</label>
-
-                <button type="submit" class="btn btn-primary" name="action" value="contabilita">Genera Excel Contabilità</button>
-                <button type="submit" class="btn btn-success" name="action" value="completo">Genera Excel Completo</button>
-                <button type="submit" class="btn btn-info" name="action" value="buste">Genera Excel Buste Paga</button>
-            </div>
-        </form>
-
-        <button onclick="window.location.href='/'" class="btn btn-warning mt-3">Indietro</button>
-
+    <!-- Selezione periodo -->
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Periodo di riferimento</span>
+        </div>
+        <div class="card-body">
+            <form id="excelForm" action="/gestione_excel" method="POST">
+                <div class="form-group">
+                    <label for="start_date">Data Inizio</label>
+                    <input type="date" class="form-control" id="start_date" name="start_date" required>
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label for="end_date">Data Fine</label>
+                    <input type="date" class="form-control" id="end_date" name="end_date" required>
+                </div>
+            </form>
+        </div>
     </div>
 
-    <!-- Script per il controllo delle date -->
-    <script>
-        document.getElementById('excelForm').addEventListener('submit', function(event) {
-            const startDate = new Date(document.getElementById('start_date').value);
-            const endDate = new Date(document.getElementById('end_date').value);
+    <!-- Tipo report -->
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Tipo di report</span>
+        </div>
+        <div class="card-body" style="display:flex; flex-direction:column; gap:10px;">
+            <button type="submit" form="excelForm" name="action" value="contabilita" class="report-btn">
+                <div class="report-icon" style="background:rgba(245,158,11,0.1); color:#d97706;">
+                    <i data-lucide="receipt"></i>
+                </div>
+                <div>
+                    <div class="report-title">Contabilità</div>
+                    <div class="report-sub">Data, cantiere, operaio, ore, lavorazione</div>
+                </div>
+                <i data-lucide="download" style="width:16px;height:16px;color:var(--text-muted);flex-shrink:0;margin-left:auto;"></i>
+            </button>
 
-            if (endDate < startDate) {
-                alert("La data di fine non può essere precedente alla data di inizio.");
-                event.preventDefault();  // Impedisce l'invio del modulo
-            }
-        });
-    </script>
+            <button type="submit" form="excelForm" name="action" value="completo" class="report-btn">
+                <div class="report-icon" style="background:rgba(59,130,246,0.1); color:#2563eb;">
+                    <i data-lucide="table"></i>
+                </div>
+                <div>
+                    <div class="report-title">Completo</div>
+                    <div class="report-sub">Include anche pioggia/vento e ferie/permessi</div>
+                </div>
+                <i data-lucide="download" style="width:16px;height:16px;color:var(--text-muted);flex-shrink:0;margin-left:auto;"></i>
+            </button>
 
-</body>
-</html>
+            <button type="submit" form="excelForm" name="action" value="buste" class="report-btn">
+                <div class="report-icon" style="background:rgba(16,185,129,0.1); color:#059669;">
+                    <i data-lucide="wallet"></i>
+                </div>
+                <div>
+                    <div class="report-title">Buste Paga</div>
+                    <div class="report-sub">Riepilogo ore per calcolo retribuzione</div>
+                </div>
+                <i data-lucide="download" style="width:16px;height:16px;color:var(--text-muted);flex-shrink:0;margin-left:auto;"></i>
+            </button>
+        </div>
+    </div>
+
+</div>
+
+<style>
+.report-btn {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    background: var(--page-bg);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-family: var(--font);
+    text-align: left;
+    transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+    width: 100%;
+}
+.report-btn:hover {
+    border-color: var(--accent);
+    background: var(--card-bg);
+    box-shadow: 0 2px 8px rgba(245,158,11,0.1);
+}
+.report-icon {
+    width: 38px; height: 38px;
+    border-radius: 8px;
+    display: grid; place-items: center;
+    flex-shrink: 0;
+}
+.report-icon i { width: 18px; height: 18px; }
+.report-title { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+.report-sub { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+</style>
+
+<script>
+document.getElementById('excelForm').addEventListener('submit', function(e) {
+    const start = new Date(document.getElementById('start_date').value);
+    const end   = new Date(document.getElementById('end_date').value);
+    if (end < start) {
+        alert("La data di fine non può essere precedente alla data di inizio.");
+        e.preventDefault();
+    }
+});
+</script>
+{% endblock %}

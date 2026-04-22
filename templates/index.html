@@ -1,44 +1,91 @@
-<!DOCTYPE html>
-<html lang="it">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Benvenuto</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <style>
-        body {
-            background-image: url("../static/background.jpg");
-            background-size: cover;
-            background-repeat: no-repeat;
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        .container {
-            background: rgba(255, 255, 255, 0.8);
-            padding: 50px;
-            border-radius: 10px;
-            text-align: center;
-        }
-        .btn {
-            width: 100%;
-            margin: 10px 0;
-            font-size: 20px;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1 class="display-4">Benvenuto</h1>
-        <div class="d-flex flex-column">
-            <a href="{{ url_for('gestione_cantieri') }}" class="btn btn-primary">Gestisci Cantieri</a>
-            <a href="{{ url_for('gestione_operai') }}" class="btn btn-secondary">Gestisci Operai</a>
-            <a href="{{ url_for('gestione_excel') }}" class="btn btn-success">Genera Foglio Excel</a>
-            <a href="{{ url_for('gestione_attivita') }}" class="btn btn-danger">Aggiungi / Modifica Attività Operai</a>
-            <a href="{{ url_for('gestione_foto_bolle') }}" class="btn btn-warning">Gestisci Foto Bolle</a>
-            <a href="{{ url_for('performance_operai') }}" class="btn btn-info">Performance Operai</a>
-        </div>
+{% extends "base.html" %}
+{% set active = 'index' %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Dashboard</h1>
+        <p class="page-subtitle">Benvenuto nel pannello di gestione Erreppi</p>
     </div>
-</body>
-</html>
+</div>
+
+<div class="grid-3" style="margin-bottom: 20px;">
+    <a href="{{ url_for('gestione_cantieri') }}" class="dash-card" style="text-decoration:none;">
+        <div class="dash-icon" style="background:rgba(245,158,11,0.1); color:#d97706;">
+            <i data-lucide="hard-hat"></i>
+        </div>
+        <div class="dash-label">Cantieri</div>
+        <div class="dash-desc">Aggiungi o rimuovi cantieri</div>
+    </a>
+    <a href="{{ url_for('gestione_operai') }}" class="dash-card" style="text-decoration:none;">
+        <div class="dash-icon" style="background:rgba(59,130,246,0.1); color:#2563eb;">
+            <i data-lucide="users"></i>
+        </div>
+        <div class="dash-label">Operai</div>
+        <div class="dash-desc">Gestisci i tuoi operai</div>
+    </a>
+    <a href="{{ url_for('gestione_attivita') }}" class="dash-card" style="text-decoration:none;">
+        <div class="dash-icon" style="background:rgba(16,185,129,0.1); color:#059669;">
+            <i data-lucide="clipboard-list"></i>
+        </div>
+        <div class="dash-label">Attività</div>
+        <div class="dash-desc">Aggiungi e modifica le giornate</div>
+    </a>
+    <a href="{{ url_for('gestione_excel') }}" class="dash-card" style="text-decoration:none;">
+        <div class="dash-icon" style="background:rgba(139,92,246,0.1); color:#7c3aed;">
+            <i data-lucide="file-spreadsheet"></i>
+        </div>
+        <div class="dash-label">Esporta Excel</div>
+        <div class="dash-desc">Genera report contabilità e buste</div>
+    </a>
+    <a href="{{ url_for('gestione_foto_bolle') }}" class="dash-card" style="text-decoration:none;">
+        <div class="dash-icon" style="background:rgba(236,72,153,0.1); color:#db2777;">
+            <i data-lucide="image"></i>
+        </div>
+        <div class="dash-label">Foto Bolle</div>
+        <div class="dash-desc">Visualizza e scarica le DDT</div>
+    </a>
+    <a href="{{ url_for('performance_operai') }}" class="dash-card" style="text-decoration:none;">
+        <div class="dash-icon" style="background:rgba(20,184,166,0.1); color:#0d9488;">
+            <i data-lucide="bar-chart-2"></i>
+        </div>
+        <div class="dash-label">Performance</div>
+        <div class="dash-desc">Calendari e statistiche operai</div>
+    </a>
+</div>
+
+<style>
+.dash-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius);
+    padding: 24px;
+    transition: box-shadow 0.15s, transform 0.15s;
+    cursor: pointer;
+    display: block;
+}
+.dash-card:hover {
+    box-shadow: var(--card-shadow-md);
+    transform: translateY(-2px);
+}
+.dash-icon {
+    width: 44px; height: 44px;
+    border-radius: 10px;
+    display: grid; place-items: center;
+    margin-bottom: 16px;
+}
+.dash-icon i { width: 22px; height: 22px; }
+.dash-label {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+.dash-desc {
+    font-size: 12.5px;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+</style>
+{% endblock %}

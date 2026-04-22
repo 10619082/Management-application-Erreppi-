@@ -1,57 +1,87 @@
-<!DOCTYPE html>
-<html lang="it">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestione Cantieri</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-</head>
-<body>
-    <div class="container mt-5">
-        <!-- Sezione titolo e pulsante "Indietro" allineati orizzontalmente -->
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h1>Gestione Cantieri</h1>
-            <a href="{{ url_for('index') }}" class="btn btn-warning">Indietro</a>
+{% extends "base.html" %}
+{% set active = 'cantieri' %}
+{% block title %}Gestione Cantieri{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Cantieri</h1>
+        <p class="page-subtitle">Aggiungi o rimuovi cantieri dal sistema</p>
+    </div>
+    <a href="{{ url_for('index') }}" class="btn-back">
+        <i data-lucide="arrow-left"></i> Indietro
+    </a>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<div class="grid-2" style="align-items: start;">
+
+    <!-- Form nuovo cantiere -->
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Nuovo Cantiere</span>
         </div>
-
-        <!-- Form per inserire un nuovo cantiere -->
-        <form action="{{ url_for('gestione_cantieri') }}" method="POST">
-            <div class="form-group">
-                <label for="nome_cantiere">Nome Cantiere:</label>
-                <input type="text" class="form-control" id="nome_cantiere" name="nome_cantiere" required>
-            </div>
-
-            <!-- Pulsante per inserire un nuovo cantiere -->
-            <button type="submit" class="btn btn-primary" name="azione" value="inserisci">Inserisci Cantiere</button>
-        </form>
-
-        <!-- Elenco dei cantieri esistenti -->
-        <h2 class="mt-5">Cantieri Esistenti</h2>
-        <ul class="list-group">
-            {% if cantieri %}
-                {% for cantiere, dati in cantieri.items() %}
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        {{ dati['nome'] }}
-                        <!-- Bottone per eliminare solo i cantieri dalla lista -->
-                        <form action="{{ url_for('gestione_cantieri') }}" method="POST" class="d-inline" onsubmit="return confermaEliminazione();">
-                            <input type="hidden" name="nome_cantiere" value="{{ dati['nome'] }}">
-                            <button type="submit" class="btn btn-danger btn-sm" name="azione" value="elimina">Elimina</button>
-                        </form>
-                    </li>
-                {% endfor %}
-            {% else %}
-                <li class="list-group-item">Nessun cantiere disponibile.</li>
-            {% endif %}
-        </ul>
+        <div class="card-body">
+            <form action="{{ url_for('gestione_cantieri') }}" method="POST">
+                <div class="form-group">
+                    <label for="nome_cantiere">Nome Cantiere</label>
+                    <input type="text" class="form-control" id="nome_cantiere" name="nome_cantiere" placeholder="Es. Via Roma 12, Milano" required>
+                </div>
+                <button type="submit" class="btn btn-primary" name="azione" value="inserisci">
+                    <i data-lucide="plus"></i> Inserisci Cantiere
+                </button>
+            </form>
+        </div>
     </div>
 
-    <!-- JavaScript per la conferma dell'eliminazione -->
-    <script>
-        function confermaEliminazione() {
-            return confirm("Sei sicuro di voler eliminare questo cantiere?");
-        }
-    </script>
+    <!-- Lista cantieri -->
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Cantieri Esistenti</span>
+            {% if cantieri %}
+                <span class="badge badge-amber">{{ cantieri | length }}</span>
+            {% endif %}
+        </div>
+        <div class="card-body" style="padding: 0;">
+            {% if cantieri %}
+                <ul style="list-style:none; padding:0; margin:0;">
+                    {% for cantiere, dati in cantieri.items() %}
+                    <li style="display:flex; align-items:center; justify-content:space-between; padding:13px 24px; border-bottom:1px solid var(--border-light);">
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <i data-lucide="hard-hat" style="width:15px;height:15px;color:var(--accent);flex-shrink:0;"></i>
+                            <span style="font-weight:500; font-size:13.5px;">{{ dati['nome'] }}</span>
+                        </div>
+                        <form action="{{ url_for('gestione_cantieri') }}" method="POST" class="d-inline" onsubmit="return confermaEliminazione();">
+                            <input type="hidden" name="nome_cantiere" value="{{ dati['nome'] }}">
+                            <button type="submit" class="btn btn-danger btn-sm" name="azione" value="elimina">
+                                <i data-lucide="trash-2"></i> Elimina
+                            </button>
+                        </form>
+                    </li>
+                    {% endfor %}
+                    <li style="border:none;"></li>
+                </ul>
+            {% else %}
+                <div class="empty-state">
+                    <i data-lucide="hard-hat"></i>
+                    <p>Nessun cantiere disponibile.<br>Aggiungine uno con il form.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
 
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+</div>
+
+<script>
+function confermaEliminazione() {
+    return confirm("Sei sicuro di voler eliminare questo cantiere?");
+}
+</script>
+{% endblock %}

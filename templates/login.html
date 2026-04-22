@@ -3,30 +3,156 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <title>Login — Erreppi</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --accent: #f59e0b;
+            --accent-dark: #d97706;
+            --font: 'DM Sans', -apple-system, sans-serif;
+            --border: #e5e4df;
+            --danger-bg: #fef2f2;
+        }
+        body {
+            font-family: var(--font);
+            background: #111827;
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            -webkit-font-smoothing: antialiased;
+        }
+        .login-wrap {
+            width: 100%;
+            max-width: 400px;
+            padding: 20px;
+        }
+        .login-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 36px;
+            justify-content: center;
+        }
+        .brand-icon {
+            width: 40px; height: 40px;
+            background: var(--accent);
+            border-radius: 10px;
+            display: grid; place-items: center;
+            font-weight: 700; font-size: 18px;
+            color: #fff;
+        }
+        .brand-name {
+            font-size: 22px;
+            font-weight: 700;
+            color: #f9fafb;
+            letter-spacing: -0.4px;
+        }
+        .login-card {
+            background: #1f2937;
+            border-radius: 16px;
+            padding: 36px;
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+        .login-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #f9fafb;
+            margin-bottom: 4px;
+        }
+        .login-sub {
+            font-size: 13.5px;
+            color: #6b7280;
+            margin-bottom: 28px;
+        }
+        .form-group { margin-bottom: 18px; }
+        label {
+            display: block;
+            font-size: 12.5px;
+            font-weight: 600;
+            color: #9ca3af;
+            margin-bottom: 6px;
+            letter-spacing: 0.03em;
+        }
+        .form-control {
+            width: 100%;
+            padding: 11px 14px;
+            background: #111827;
+            border: 1.5px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            color: #f9fafb;
+            font-family: var(--font);
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+        .form-control:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(245,158,11,0.15);
+        }
+        .form-control::placeholder { color: #4b5563; }
+        .btn-login {
+            width: 100%;
+            padding: 12px;
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-family: var(--font);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 8px;
+            transition: background 0.15s, transform 0.1s;
+        }
+        .btn-login:hover { background: var(--accent-dark); transform: translateY(-1px); }
+        .btn-login:active { transform: translateY(0); }
+        .alert {
+            padding: 11px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            margin-top: 16px;
+            background: rgba(239,68,68,0.12);
+            border: 1px solid rgba(239,68,68,0.25);
+            color: #fca5a5;
+        }
+        .login-footer {
+            text-align: center;
+            margin-top: 24px;
+            font-size: 12px;
+            color: #374151;
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <h1 class="mt-5">Login</h1>
-        <form action="/login" method="POST">
-            <div class="form-group">
-                <label for="username">Nome Utente</label>
-                <input type="text" class="form-control" id="username" name="username" required>
-            </div>
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" class="form-control" id="password" name="password" required>
-            </div>
-            <button type="submit" class="btn btn-primary">Login</button>
-        </form>
-        {% with messages = get_flashed_messages() %}
-            {% if messages %}
-                <div class="alert alert-danger mt-3">
-                    {{ messages[0] }}
+    <div class="login-wrap">
+        <div class="login-brand">
+            <span class="brand-icon">R</span>
+            <span class="brand-name">Erreppi</span>
+        </div>
+        <div class="login-card">
+            <h1 class="login-title">Accedi</h1>
+            <p class="login-sub">Gestione cantieri e operai</p>
+
+            <form action="/login" method="POST">
+                <div class="form-group">
+                    <label for="username">Nome Utente</label>
+                    <input type="text" class="form-control" id="username" name="username" placeholder="Inserisci username" required autocomplete="username">
                 </div>
-            {% endif %}
-        {% endwith %}
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" class="form-control" id="password" name="password" placeholder="••••••••" required autocomplete="current-password">
+                </div>
+                <button type="submit" class="btn-login">Accedi</button>
+            </form>
+
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                    <div class="alert">{{ messages[0] }}</div>
+                {% endif %}
+            {% endwith %}
+        </div>
+        <p class="login-footer">© {{ 2025 }} Erreppi — Gestione Cantieri</p>
     </div>
 </body>
 </html>

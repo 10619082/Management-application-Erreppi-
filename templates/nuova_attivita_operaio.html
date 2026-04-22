@@ -1,40 +1,93 @@
-<!DOCTYPE html>
-<html lang="it">
-<head>
-    <meta charset="UTF-8">
-    <title>Nuova Attività per {{ operaio['nome'] }} {{ operaio['cognome'] }}</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <style>
-        .header-section {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-        .btn-block-custom {
-            width: 100%;
-            margin-bottom: 15px;
-            padding: 15px;
-            font-size: 1.2em;
-        }
-        .btn-block-custom-last {
-            margin-bottom: 0;
-        }
-    </style>
-</head>
-<body>
-<div class="container mt-5">
-    <!-- Sezione titolo e tasto Indietro allineati -->
-    <div class="header-section">
-        <h1>Nuova Attività per {{ operaio['nome'] }} {{ operaio['cognome'] }}</h1>
-        <a href="{{ url_for('gestione_attivita') }}" class="btn btn-warning">Indietro</a>
-    </div>
+{% extends "base.html" %}
+{% set active = 'attivita' %}
+{% block title %}Nuova Attività — {{ operaio['nome'] }} {{ operaio['cognome'] }}{% endblock %}
 
-    <form method="POST">
-        <button type="submit" name="azione" value="inserisci_complete" class="btn btn-primary btn-block-custom">Aggiungi Nuova Giornata di Lavoro</button>
-        <button type="submit" name="azione" value="ferie_permessi" class="btn btn-secondary btn-block-custom">Ferie / Permessi</button>
-        <button type="submit" name="azione" value="pioggia_vento" class="btn btn-info btn-block-custom btn-block-custom-last">Pioggia / Vento</button>
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Nuova Attività</h1>
+        <p class="page-subtitle">{{ operaio['nome'] }} {{ operaio['cognome'] }} — Scegli il tipo di attività</p>
+    </div>
+    <a href="{{ url_for('gestione_attivita') }}" class="btn-back">
+        <i data-lucide="arrow-left"></i> Indietro
+    </a>
+</div>
+
+<div style="max-width: 480px;">
+    <form method="POST" style="display:flex; flex-direction:column; gap:12px;">
+        <button type="submit" name="azione" value="inserisci_complete" class="activity-btn">
+            <div class="activity-icon" style="background:rgba(245,158,11,0.1); color:#d97706;">
+                <i data-lucide="sun"></i>
+            </div>
+            <div class="activity-text">
+                <div class="activity-title">Giornata di Lavoro</div>
+                <div class="activity-sub">Inserisci cantiere, ore e lavorazione svolta</div>
+            </div>
+            <i data-lucide="chevron-right" style="width:18px;height:18px;color:var(--text-muted);flex-shrink:0;"></i>
+        </button>
+
+        <button type="submit" name="azione" value="ferie_permessi" class="activity-btn">
+            <div class="activity-icon" style="background:rgba(59,130,246,0.1); color:#2563eb;">
+                <i data-lucide="calendar-off"></i>
+            </div>
+            <div class="activity-text">
+                <div class="activity-title">Ferie / Permessi</div>
+                <div class="activity-sub">Registra ferie o permesso per questa giornata</div>
+            </div>
+            <i data-lucide="chevron-right" style="width:18px;height:18px;color:var(--text-muted);flex-shrink:0;"></i>
+        </button>
+
+        <button type="submit" name="azione" value="pioggia_vento" class="activity-btn">
+            <div class="activity-icon" style="background:rgba(16,185,129,0.1); color:#059669;">
+                <i data-lucide="cloud-rain"></i>
+            </div>
+            <div class="activity-text">
+                <div class="activity-title">Pioggia / Vento</div>
+                <div class="activity-sub">Giornata persa per condizioni meteo avverse</div>
+            </div>
+            <i data-lucide="chevron-right" style="width:18px;height:18px;color:var(--text-muted);flex-shrink:0;"></i>
+        </button>
     </form>
 </div>
-</body>
-</html>
+
+<style>
+.activity-btn {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 18px 20px;
+    background: var(--card-bg);
+    border: 1.5px solid var(--border-light);
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-family: var(--font);
+    text-align: left;
+    transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s;
+    width: 100%;
+}
+.activity-btn:hover {
+    border-color: var(--accent);
+    box-shadow: 0 4px 12px rgba(245,158,11,0.12);
+    transform: translateY(-1px);
+}
+.activity-icon {
+    width: 44px; height: 44px;
+    border-radius: 10px;
+    display: grid; place-items: center;
+    flex-shrink: 0;
+}
+.activity-icon i { width: 22px; height: 22px; }
+.activity-text { flex: 1; }
+.activity-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 3px;
+}
+.activity-sub {
+    font-size: 12.5px;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+</style>
+{% endblock %}

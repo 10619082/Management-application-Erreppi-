@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Erreppi{% endblock %}</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --sidebar-w: 240px;
+            --sidebar-bg: #111827;
+            --sidebar-text: #9ca3af;
+            --sidebar-text-hover: #f9fafb;
+            --sidebar-active-bg: rgba(245,158,11,0.12);
+            --sidebar-active-text: #fbbf24;
+            --sidebar-border: rgba(255,255,255,0.06);
+
+            --accent: #f59e0b;
+            --accent-dark: #d97706;
+            --accent-light: rgba(245,158,11,0.1);
+
+            --page-bg: #f5f4f1;
+            --card-bg: #ffffff;
+            --card-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+            --card-shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+
+            --text-primary: #111827;
+            --text-secondary: #6b7280;
+            --text-muted: #9ca3af;
+            --border: #e5e4df;
+            --border-light: #f0ede8;
+
+            --success: #10b981;
+            --success-bg: #ecfdf5;
+            --danger: #ef4444;
+            --danger-bg: #fef2f2;
+            --info: #3b82f6;
+            --info-bg: #eff6ff;
+            --warning: #f59e0b;
+            --warning-bg: #fffbeb;
+
+            --radius: 10px;
+            --radius-sm: 6px;
+            --radius-lg: 14px;
+            --font: 'DM Sans', -apple-system, sans-serif;
+        }
+
+        body {
+            font-family: var(--font);
+            background: var(--page-bg);
+            color: var(--text-primary);
+            line-height: 1.5;
+            font-size: 14px;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ── LAYOUT ─────────────────────────────── */
+        .app-layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* ── SIDEBAR ─────────────────────────────── */
+        .sidebar {
+            width: var(--sidebar-w);
+            background: var(--sidebar-bg);
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            top: 0; left: 0; bottom: 0;
+            z-index: 100;
+            overflow-y: auto;
+        }
+
+        .sidebar-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 24px 20px 20px;
+            border-bottom: 1px solid var(--sidebar-border);
+        }
+
+        .brand-icon {
+            width: 34px; height: 34px;
+            background: var(--accent);
+            border-radius: 8px;
+            display: grid; place-items: center;
+            font-weight: 700; font-size: 16px;
+            color: #fff;
+            flex-shrink: 0;
+        }
+
+        .brand-name {
+            font-size: 17px;
+            font-weight: 700;
+            color: #f9fafb;
+            letter-spacing: -0.3px;
+        }
+
+        .sidebar-section {
+            padding: 20px 12px 8px;
+            flex: 1;
+        }
+
+        .sidebar-label {
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--sidebar-text);
+            padding: 0 8px;
+            margin-bottom: 6px;
+            opacity: 0.6;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 10px;
+            border-radius: var(--radius-sm);
+            color: var(--sidebar-text);
+            text-decoration: none;
+            font-size: 13.5px;
+            font-weight: 500;
+            transition: background 0.15s, color 0.15s;
+            margin-bottom: 2px;
+        }
+
+        .nav-item:hover {
+            background: rgba(255,255,255,0.06);
+            color: var(--sidebar-text-hover);
+            text-decoration: none;
+        }
+
+        .nav-item.active {
+            background: var(--sidebar-active-bg);
+            color: var(--sidebar-active-text);
+        }
+
+        .nav-item i {
+            width: 18px; height: 18px;
+            flex-shrink: 0;
+            opacity: 0.8;
+        }
+
+        .nav-item.active i { opacity: 1; }
+
+        .sidebar-footer {
+            padding: 12px;
+            border-top: 1px solid var(--sidebar-border);
+        }
+
+        .sidebar-footer .nav-item {
+            color: var(--sidebar-text);
+        }
+
+        .sidebar-footer .nav-item:hover {
+            color: var(--danger);
+            background: rgba(239,68,68,0.08);
+        }
+
+        /* ── MAIN ─────────────────────────────────── */
+        .main {
+            margin-left: var(--sidebar-w);
+            flex: 1;
+            min-width: 0;
+        }
+
+        .page {
+            padding: 36px 40px;
+            max-width: 1100px;
+        }
+
+        .page-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 32px;
+            gap: 16px;
+        }
+
+        .page-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: -0.4px;
+            line-height: 1.2;
+        }
+
+        .page-subtitle {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        /* ── CARDS ──────────────────────────────────── */
+        .card {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            box-shadow: var(--card-shadow);
+            border: 1px solid var(--border-light);
+        }
+
+        .card-header {
+            padding: 20px 24px 16px;
+            border-bottom: 1px solid var(--border-light);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .card-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .card-body { padding: 24px; }
+
+        /* ── FORM ELEMENTS ──────────────────────────── */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 6px;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-family: var(--font);
+            font-size: 14px;
+            color: var(--text-primary);
+            background: #fff;
+            transition: border-color 0.15s, box-shadow 0.15s;
+            outline: none;
+            appearance: none;
+        }
+
+        .form-control:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(245,158,11,0.12);
+        }
+
+        select.form-control {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            padding-right: 36px;
+        }
+
+        textarea.form-control { resize: vertical; min-height: 90px; }
+
+        /* ── BUTTONS ─────────────────────────────────── */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 9px 18px;
+            border-radius: var(--radius-sm);
+            font-family: var(--font);
+            font-size: 13.5px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            text-decoration: none;
+            transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+            white-space: nowrap;
+        }
+
+        .btn:hover { text-decoration: none; transform: translateY(-1px); }
+        .btn:active { transform: translateY(0); }
+
+        .btn-primary { background: var(--accent); color: #fff; }
+        .btn-primary:hover { background: var(--accent-dark); color: #fff; }
+
+        .btn-danger { background: var(--danger); color: #fff; }
+        .btn-danger:hover { background: #dc2626; color: #fff; }
+
+        .btn-success { background: var(--success); color: #fff; }
+        .btn-success:hover { background: #059669; color: #fff; }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1.5px solid var(--border);
+        }
+        .btn-ghost:hover {
+            background: var(--page-bg);
+            color: var(--text-primary);
+        }
+
+        .btn-sm { padding: 6px 12px; font-size: 12.5px; }
+        .btn i { width: 15px; height: 15px; }
+
+        /* ── BACK BUTTON ──────────────────────────── */
+        .btn-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            text-decoration: none;
+            padding: 7px 12px;
+            border-radius: var(--radius-sm);
+            border: 1.5px solid var(--border);
+            background: var(--card-bg);
+            transition: all 0.15s;
+        }
+        .btn-back:hover {
+            color: var(--text-primary);
+            border-color: var(--text-secondary);
+            text-decoration: none;
+            transform: translateY(-1px);
+        }
+        .btn-back i { width: 15px; height: 15px; }
+
+        /* ── ALERTS ──────────────────────────────────── */
+        .alert {
+            padding: 12px 16px;
+            border-radius: var(--radius-sm);
+            font-size: 13.5px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .alert-success { background: var(--success-bg); color: #065f46; border: 1px solid #a7f3d0; }
+        .alert-danger  { background: var(--danger-bg);  color: #991b1b; border: 1px solid #fca5a5; }
+        .alert-warning { background: var(--warning-bg); color: #92400e; border: 1px solid #fde68a; }
+        .alert-info    { background: var(--info-bg);    color: #1e40af; border: 1px solid #bfdbfe; }
+
+        /* ── TABLES ──────────────────────────────────── */
+        .table-wrap { overflow-x: auto; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13.5px;
+        }
+
+        thead th {
+            text-align: left;
+            padding: 11px 16px;
+            font-size: 11.5px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-secondary);
+            border-bottom: 1.5px solid var(--border);
+            background: #faf9f6;
+        }
+
+        tbody td {
+            padding: 13px 16px;
+            border-bottom: 1px solid var(--border-light);
+            color: var(--text-primary);
+            vertical-align: middle;
+        }
+
+        tbody tr:last-child td { border-bottom: none; }
+        tbody tr:hover td { background: #faf9f6; }
+
+        /* ── BADGE ──────────────────────────────────── */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 3px 9px;
+            border-radius: 99px;
+            font-size: 11.5px;
+            font-weight: 600;
+        }
+
+        .badge-green  { background: var(--success-bg); color: #065f46; }
+        .badge-red    { background: var(--danger-bg);  color: #991b1b; }
+        .badge-amber  { background: var(--warning-bg); color: #92400e; }
+        .badge-blue   { background: var(--info-bg);    color: #1e40af; }
+        .badge-gray   { background: var(--border-light); color: var(--text-secondary); }
+
+        /* ── GRID HELPERS ─────────────────────────── */
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+
+        /* ── DIVIDER ─────────────────────────────── */
+        .divider { height: 1px; background: var(--border-light); margin: 24px 0; }
+
+        /* ── EMPTY STATE ─────────────────────────── */
+        .empty-state {
+            text-align: center;
+            padding: 48px 24px;
+            color: var(--text-secondary);
+        }
+        .empty-state i { width: 40px; height: 40px; margin-bottom: 12px; opacity: 0.3; }
+        .empty-state p { font-size: 14px; }
+
+        /* ── RESPONSIVE ───────────────────────────── */
+        @media (max-width: 768px) {
+            :root { --sidebar-w: 0px; }
+            .sidebar { transform: translateX(-240px); }
+            .page { padding: 20px 16px; }
+            .grid-2, .grid-3 { grid-template-columns: 1fr; }
+        }
+    </style>
+    {% block head %}{% endblock %}
+</head>
+<body>
+<div class="app-layout">
+
+    <aside class="sidebar">
+        <div class="sidebar-brand">
+            <span class="brand-icon">R</span>
+            <span class="brand-name">Erreppi</span>
+        </div>
+        <div class="sidebar-section">
+            <p class="sidebar-label">Navigazione</p>
+            <a href="{{ url_for('index') }}" class="nav-item {% if active == 'index' %}active{% endif %}">
+                <i data-lucide="layout-dashboard"></i><span>Dashboard</span>
+            </a>
+            <a href="{{ url_for('gestione_cantieri') }}" class="nav-item {% if active == 'cantieri' %}active{% endif %}">
+                <i data-lucide="hard-hat"></i><span>Cantieri</span>
+            </a>
+            <a href="{{ url_for('gestione_operai') }}" class="nav-item {% if active == 'operai' %}active{% endif %}">
+                <i data-lucide="users"></i><span>Operai</span>
+            </a>
+            <a href="{{ url_for('gestione_attivita') }}" class="nav-item {% if active == 'attivita' %}active{% endif %}">
+                <i data-lucide="clipboard-list"></i><span>Attività</span>
+            </a>
+            <a href="{{ url_for('gestione_excel') }}" class="nav-item {% if active == 'excel' %}active{% endif %}">
+                <i data-lucide="file-spreadsheet"></i><span>Esporta Excel</span>
+            </a>
+            <a href="{{ url_for('gestione_foto_bolle') }}" class="nav-item {% if active == 'foto' %}active{% endif %}">
+                <i data-lucide="image"></i><span>Foto Bolle</span>
+            </a>
+            <a href="{{ url_for('performance_operai') }}" class="nav-item {% if active == 'performance' %}active{% endif %}">
+                <i data-lucide="bar-chart-2"></i><span>Performance</span>
+            </a>
+        </div>
+        <div class="sidebar-footer">
+            <a href="{{ url_for('logout') }}" class="nav-item">
+                <i data-lucide="log-out"></i><span>Esci</span>
+            </a>
+        </div>
+    </aside>
+
+    <main class="main">
+        <div class="page">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+</div>
+<script>lucide.createIcons();</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

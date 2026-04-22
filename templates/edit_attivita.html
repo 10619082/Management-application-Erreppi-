@@ -1,82 +1,89 @@
-<!DOCTYPE html>
-<html lang="it">
-<head>
-    <meta charset="UTF-8">
-    <title>Modifica Attività</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <style>
-        .header-section {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-    </style>
-</head>
-<body>
-<div class="container mt-5">
-    <!-- Sezione per il titolo e il tasto "Indietro" -->
-    <div class="header-section">
-        <h1>Modifica Attività</h1>
-        <a href="{{ url_for('gestione_attivita') }}" class="btn btn-warning">Indietro</a>
+{% extends "base.html" %}
+{% set active = 'attivita' %}
+{% block title %}Modifica Attività{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Modifica Attività</h1>
+        <p class="page-subtitle">Operaio: {{ email }}</p>
     </div>
-
-    <form method="POST">
-        <!-- Campo data con selezione del calendario -->
-        <div class="form-group">
-            <label for="data">Data</label>
-            <input type="date" class="form-control" id="data" name="data" value="{{ attivita['data'] if attivita.get('data') else '' }}">
-        </div>
-        
-        <!-- Dropdown per Cantiere -->
-        <div class="form-group">
-            <label for="cantiere">Cantiere</label>
-            <select class="form-control" id="cantiere" name="cantiere">
-                <!-- Opzione vuota per il caso in cui nessun cantiere sia selezionato -->
-                <option value="" {% if attivita.get('cantiere', '') =='' %}selected{% endif %}></option>
-                
-                <!-- Itera su tutti i cantieri -->
-                {% for cantiere in cantieri %}
-                <option value="{{ cantiere }}" {% if attivita.get('cantiere', '') == cantiere %}selected{% endif %}>
-                    {{ cantiere }}
-                </option>
-                {% endfor %}
-            </select>
-        </div>
-        <!-- Campo Ore -->
-        <div class="form-group">
-            <label for="ore">Ore</label>
-            <input type="text" class="form-control" id="ore" name="ore" value="{{ attivita['ore'] if attivita.get('ore') else '' }}">
-        </div>
-        
-        <!-- Campo Lavorazione -->
-        <div class="form-group">
-            <label for="lavorazione">Lavorazione</label>
-            <input type="text" class="form-control" id="lavorazione" name="lavorazione" value="{{ attivita.get('lavorazione', '') }}">
-        </div>
-        
-        <!-- Dropdown per Pioggia/Vento -->
-        <div class="form-group">
-            <label for="pioggia_vento">Pioggia/Vento</label>
-            <select class="form-control" id="pioggia_vento" name="pioggia_vento">
-                <option value="" {% if not attivita.get('pioggia_vento', '') %}selected{% endif %}></option>
-                <option value="Pioggia" {% if attivita.get('pioggia_vento', '') == 'Pioggia' %}selected{% endif %}>Pioggia</option>
-                <option value="Vento" {% if attivita.get('pioggia_vento', '') == 'Vento' %}selected{% endif %}>Vento</option>
-            </select>
-        </div>
-        
-        <!-- Dropdown per Ferie/Permesso -->
-        <div class="form-group">
-            <label for="ferie_permesso">Ferie/Permesso</label>
-            <select class="form-control" id="ferie_permesso" name="ferie_permesso">
-                <option value="" {% if not attivita.get('ferie_permesso', '') %}selected{% endif %}></option>
-                <option value="Ferie" {% if attivita.get('ferie_permesso', '') == 'Ferie' %}selected{% endif %}>Ferie</option>
-                <option value="Permesso" {% if attivita.get('ferie_permesso', '') == 'Permesso' %}selected{% endif %}>Permesso</option>
-            </select>
-        </div>
-
-        <button type="submit" class="btn btn-primary">Salva</button>
-    </form>
+    <a href="{{ url_for('modifica_attivita', email=email) }}" class="btn-back">
+        <i data-lucide="arrow-left"></i> Indietro
+    </a>
 </div>
-</body>
-</html>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<div class="card" style="max-width:560px;">
+    <div class="card-header">
+        <span class="card-title">Dati Attività</span>
+    </div>
+    <div class="card-body">
+        <form method="POST">
+            <div class="grid-2">
+                <div class="form-group">
+                    <label for="data">Data</label>
+                    <input type="date" class="form-control" id="data" name="data"
+                           value="{{ attivita['data'] if attivita.get('data') else '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="ore">Ore</label>
+                    <input type="text" class="form-control" id="ore" name="ore"
+                           value="{{ attivita['ore'] if attivita.get('ore') else '' }}" placeholder="Es. 8">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="cantiere">Cantiere</label>
+                <select class="form-control" id="cantiere" name="cantiere">
+                    <option value="" {% if not attivita.get('cantiere') %}selected{% endif %}></option>
+                    {% for cantiere in cantieri %}
+                    <option value="{{ cantiere }}" {% if attivita.get('cantiere') == cantiere %}selected{% endif %}>
+                        {{ cantiere }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="lavorazione">Lavorazione</label>
+                <input type="text" class="form-control" id="lavorazione" name="lavorazione"
+                       value="{{ attivita.get('lavorazione', '') }}" placeholder="Descrizione lavori">
+            </div>
+
+            <div class="grid-2">
+                <div class="form-group">
+                    <label for="pioggia_vento">Pioggia / Vento</label>
+                    <select class="form-control" id="pioggia_vento" name="pioggia_vento">
+                        <option value="" {% if not attivita.get('pioggia_vento') %}selected{% endif %}>—</option>
+                        <option value="Pioggia" {% if attivita.get('pioggia_vento') == 'Pioggia' %}selected{% endif %}>Pioggia</option>
+                        <option value="Vento"   {% if attivita.get('pioggia_vento') == 'Vento'   %}selected{% endif %}>Vento</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="ferie_permesso">Ferie / Permesso</label>
+                    <select class="form-control" id="ferie_permesso" name="ferie_permesso">
+                        <option value="" {% if not attivita.get('ferie_permesso') %}selected{% endif %}>—</option>
+                        <option value="Ferie"    {% if attivita.get('ferie_permesso') == 'Ferie'    %}selected{% endif %}>Ferie</option>
+                        <option value="Permesso" {% if attivita.get('ferie_permesso') == 'Permesso' %}selected{% endif %}>Permesso</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="display:flex; gap:10px; margin-top:4px;">
+                <button type="submit" class="btn btn-primary">
+                    <i data-lucide="save"></i> Salva Modifiche
+                </button>
+                <a href="{{ url_for('modifica_attivita', email=email) }}" class="btn btn-ghost">Annulla</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
